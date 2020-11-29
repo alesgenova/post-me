@@ -17,7 +17,8 @@ export interface HandshakeMessage extends Message<MessageType.Handshake> {
   requestId: IdType;
 }
 
-export interface CallMessage<A extends Array<any>> extends Message<MessageType.Call> {
+export interface CallMessage<A extends Array<any>>
+  extends Message<MessageType.Call> {
   requestId: IdType;
   name: string;
   args: A;
@@ -45,44 +46,61 @@ export function createHandshakeMessage(sessionId: IdType): HandshakeMessage {
     type: MessageType.Handshake,
     sessionId,
     requestId: sessionId,
-  }
+  };
 }
 
-export function createCallMessage<A extends Array<any>>(sessionId: IdType, requestId: IdType, name: string, ...args: A): CallMessage<A> {
+export function createCallMessage<A extends Array<any>>(
+  sessionId: IdType,
+  requestId: IdType,
+  name: string,
+  ...args: A
+): CallMessage<A> {
   return {
     type: MessageType.Call,
     sessionId,
     requestId,
     name,
     args,
-  }
+  };
 }
 
-export function createResponsMessage<R>(sessionId: IdType, requestId: IdType, result: R): ResponseMessage<R> {
+export function createResponsMessage<R>(
+  sessionId: IdType,
+  requestId: IdType,
+  result: R
+): ResponseMessage<R> {
   return {
     type: MessageType.Response,
     sessionId,
     requestId,
     result,
-  }
+  };
 }
 
-export function createErrorMessage(sessionId: IdType, requestId: IdType, error: string): ErrorMessage {
+export function createErrorMessage(
+  sessionId: IdType,
+  requestId: IdType,
+  error: string
+): ErrorMessage {
   return {
     type: MessageType.Error,
     sessionId,
     requestId,
     error,
-  }
+  };
 }
 
-export function createEventMessage<P>(sessionId: IdType, name: string, payload: P): EventMessage<P> {
+export function createEventMessage<P>(
+  sessionId: IdType,
+  name: string,
+  payload: P
+): EventMessage<P> {
   return {
     type: MessageType.Event,
     sessionId,
     name,
     payload,
-  }
+  };
 }
 
 // Type Guards
@@ -91,7 +109,7 @@ export function isMessage(m: any): m is Message<any> {
   return (
     (m as Message<any>).type !== undefined &&
     (m as Message<any>).sessionId !== undefined
-  )
+  );
 }
 
 export function isHandshakeMessage(m: Message<any>): m is HandshakeMessage {
@@ -99,7 +117,7 @@ export function isHandshakeMessage(m: Message<any>): m is HandshakeMessage {
     isMessage(m) &&
     m.type === MessageType.Handshake &&
     (m as HandshakeMessage).requestId !== undefined
-  )
+  );
 }
 
 export function isCallMessage(m: Message<any>): m is CallMessage<any[]> {
@@ -109,7 +127,7 @@ export function isCallMessage(m: Message<any>): m is CallMessage<any[]> {
     (m as CallMessage<any[]>).requestId !== undefined &&
     (m as CallMessage<any[]>).name !== undefined &&
     Array.isArray((m as CallMessage<any[]>).args)
-  )
+  );
 }
 
 export function isResponseMessage(m: Message<any>): m is ResponseMessage<any> {
@@ -117,7 +135,7 @@ export function isResponseMessage(m: Message<any>): m is ResponseMessage<any> {
     isMessage(m) &&
     m.type === MessageType.Response &&
     (m as ResponseMessage<any>).requestId !== undefined
-  )
+  );
 }
 
 export function isErrorMessage(m: Message<any>): m is ErrorMessage {
@@ -126,12 +144,9 @@ export function isErrorMessage(m: Message<any>): m is ErrorMessage {
     m.type === MessageType.Error &&
     (m as ErrorMessage).requestId !== undefined &&
     (m as ErrorMessage).error !== undefined
-  )
+  );
 }
 
 export function isEventMessage(m: Message<any>): m is EventMessage<any> {
-  return (
-    isMessage(m) &&
-    m.type === MessageType.Event
-  )
+  return isMessage(m) && m.type === MessageType.Event;
 }
