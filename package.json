@@ -11,8 +11,19 @@
   "scripts": {
     "build": "rollup -c",
     "build:demo": "npm run build && node scripts/build-demo.js www",
-    "start": "npm run build:demo && npx serve www",
-    "test": "jest --coverage tests"
+    "demo": "npm run build:demo && npx serve www",
+    "test": "jest --coverage tests",
+    "prettier:check-staged": "pretty-quick --staged --check --pattern '**/*.{js,jsx,ts,tsx,css,html}'",
+    "prettier:write-staged": "pretty-quick --staged --write --pattern '**/*.{js,jsx,ts,tsx,css,html}'",
+    "prettier:check-modified": "pretty-quick --check --pattern '**/*.{js,jsx,ts,tsx,css,html}'",
+    "prettier:write-modified": "pretty-quick --write --pattern '**/*.{js,jsx,ts,tsx,css,html}'",
+    "prettier:check-all": "prettier --check '**/*.{js,jsx,ts,tsx,css,html}'",
+    "prettier:write-all": "prettier --write '**/*.{js,jsx,ts,tsx,css,html}'"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "yarn prettier:write-staged"
+    }
   },
   "author": "Alessandro Genova",
   "license": "MIT",
@@ -24,8 +35,11 @@
   "devDependencies": {
     "@types/jest": "^26.0.15",
     "@types/jsdom": "^16.2.5",
+    "husky": "^4.3.0",
     "jest": "^26.6.3",
     "jsdom": "^16.4.0",
+    "prettier": "^2.2.1",
+    "pretty-quick": "^3.1.0",
     "rollup": "^2.33.3",
     "rollup-plugin-typescript2": "^0.29.0",
     "ts-jest": "^26.4.4",

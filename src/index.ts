@@ -1,5 +1,3 @@
 import { ParentHandshake, ChildHandshake } from './handshake';
 
-export {
-  ParentHandshake, ChildHandshake,
-}
+export { ParentHandshake, ChildHandshake };
