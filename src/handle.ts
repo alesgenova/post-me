@@ -6,7 +6,10 @@ export type MethodsType = Required<
 
 export type EventsType = Record<string, any>;
 
-export interface RemoteHandle<M extends MethodsType, E extends EventsType> {
+export interface RemoteHandle<
+  M extends MethodsType = {},
+  E extends EventsType = {}
+> {
   call: <K extends keyof M>(
     methodName: K,
     ...args: Parameters<M[K]>
@@ -21,6 +24,6 @@ export interface RemoteHandle<M extends MethodsType, E extends EventsType> {
   ) => void;
 }
 
-export interface LocalHandle<E extends EventsType> {
+export interface LocalHandle<E extends EventsType = {}> {
   emit: <K extends keyof E>(eventName: K, data: E[K]) => void;
 }

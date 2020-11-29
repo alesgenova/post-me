@@ -8,6 +8,10 @@ const titleElement = document.createElement('h1');
 titleElement.innerHTML = title;
 container.appendChild(titleElement);
 container.style.backgroundColor = color;
+const childrenControlsContainer = document.createElement('div');
+container.appendChild(childrenControlsContainer);
+const workerControlsContainer = document.createElement('div');
+container.appendChild(workerControlsContainer);
 
 const methods = {
   getTitle: () => title,
@@ -23,6 +27,7 @@ const methods = {
 };
 
 const children = [0, 1, 2, 3];
+
 const defaultTitles = {
   0: 'Child 0',
   1: 'Child 1',
@@ -37,7 +42,7 @@ const defaultColors = {
   3: '#eeeeaa',
 };
 
-const createChildFrame = (i) => {
+const createChildWindow = (i) => {
   return new Promise((resolve) => {
     const childContainer = document.getElementById(`child${i}-container`);
     const childFrame = document.createElement('iframe');
@@ -46,14 +51,23 @@ const createChildFrame = (i) => {
     childFrame.height = '100%';
     childContainer.appendChild(childFrame);
     childFrame.onload = () => {
-      resolve(childFrame);
+      const childWindow = childFrame.contentWindow;
+      resolve(childWindow);
     };
   });
 };
 
-const makeHandshake = (i, childFrame) => {
-  const childWindow = childFrame.contentWindow;
-  return ParentHandshake(childWindow.origin, childWindow, methods);
+// const createChildWindow = (i) => {
+//   return new Promise((resolve) => {
+//     const childWindow = window.open('./child.html', '_blank');
+//     childWindow.onload = () => {
+//       resolve(childWindow);
+//     }
+//   })
+// }
+
+const makeHandshake = (i, childWindow) => {
+  return ParentHandshake(methods, childWindow, childWindow.origin);
 };
 
 const createChildControls = (i, controlsContainer, connection) => {
@@ -73,6 +87,7 @@ const createChildControls = (i, controlsContainer, connection) => {
     const section = document.createElement('div');
     section.style.marginBottom = '0.5rem';
     const input = document.createElement('input');
+    input.style.width = '10rem';
     input.value = defaultTitle;
     const button = document.createElement('button');
     button.innerHTML = 'Set Title';
@@ -88,6 +103,7 @@ const createChildControls = (i, controlsContainer, connection) => {
     const section = document.createElement('div');
     section.style.marginBottom = '0.5rem';
     const input = document.createElement('input');
+    input.style.width = '10rem';
     input.value = defaultColor;
     const button = document.createElement('button');
     button.innerHTML = 'Set Color';
@@ -133,10 +149,109 @@ const createChildControls = (i, controlsContainer, connection) => {
 
 const initChild = async (i) => {
   const controlsContainer = document.createElement('div');
-  container.appendChild(controlsContainer);
-  const childFrame = await createChildFrame(i);
-  const connection = await makeHandshake(i, childFrame);
+  childrenControlsContainer.appendChild(controlsContainer);
+  const childWindow = await createChildWindow(i);
+  const connection = await makeHandshake(i, childWindow);
   createChildControls(i, controlsContainer, connection);
 };
 
 children.forEach((i) => initChild(i));
+
+// Create the worker
+{
+  const worker = new Worker('./worker.js');
+
+  ParentHandshake(window.origin, worker, {}).then((connection) => {
+    const remoteHandle = connection.remoteHandle();
+
+    const title = document.createElement('h4');
+    title.innerHTML = `Worker`;
+    workerControlsContainer.appendChild(title);
+
+    {
+      const section = document.createElement('div');
+      section.style.marginBottom = '0.5rem';
+
+      const inputA = document.createElement('input');
+      inputA.style.width = '3rem';
+      inputA.type = 'number';
+      inputA.value = 1;
+
+      const inputB = document.createElement('input');
+      inputB.style.width = '3rem';
+      inputB.type = 'number';
+      inputB.value = 2;
+
+      const inputR = document.createElement('input');
+      inputR.style.width = '3rem';
+      inputR.type = 'number';
+      inputR.disabled = true;
+
+      const button = document.createElement('button');
+      button.innerHTML = 'Calculate';
+      button.onclick = () => {
+        remoteHandle
+          .call('sum', parseFloat(inputA.value), parseFloat(inputB.value))
+          .then((result) => {
+            inputR.value = result;
+          });
+      };
+
+      const opSpan = document.createElement('span');
+      opSpan.innerHTML = ' + ';
+      const eqSpan = document.createElement('span');
+      eqSpan.innerHTML = ' = ';
+
+      section.appendChild(inputA);
+      section.appendChild(opSpan);
+      section.appendChild(inputB);
+      section.appendChild(eqSpan);
+      section.appendChild(inputR);
+      section.appendChild(button);
+      workerControlsContainer.appendChild(section);
+    }
+
+    {
+      const section = document.createElement('div');
+      section.style.marginBottom = '0.5rem';
+
+      const inputA = document.createElement('input');
+      inputA.style.width = '3rem';
+      inputA.type = 'number';
+      inputA.value = 3;
+
+      const inputB = document.createElement('input');
+      inputB.style.width = '3rem';
+      inputB.type = 'number';
+      inputB.value = 4;
+
+      const inputR = document.createElement('input');
+      inputR.style.width = '3rem';
+      inputR.type = 'number';
+      inputR.disabled = true;
+
+      const button = document.createElement('button');
+      button.innerHTML = 'Calculate';
+      button.onclick = () => {
+        remoteHandle
+          .call('mul', parseFloat(inputA.value), parseFloat(inputB.value))
+          .then((result) => {
+            inputR.value = result;
+          });
+      };
+
+      const opSpan = document.createElement('span');
+      opSpan.innerHTML = ' * ';
+      const eqSpan = document.createElement('span');
+      eqSpan.innerHTML = ' = ';
+
+      section.appendChild(inputA);
+      section.appendChild(opSpan);
+      section.appendChild(inputB);
+      section.appendChild(eqSpan);
+      section.appendChild(inputR);
+      section.appendChild(button);
+      workerControlsContainer.appendChild(section);
+    }
+  });
+}

@@ -1,4 +1,5 @@
 import { ParentHandshake, ChildHandshake } from '../src/handshake';
+import { Connection } from '../src/connection';
 
 import { JSDOM } from 'jsdom';
 
@@ -79,24 +80,27 @@ function makeWindows(parentOrigin: string, childOrigin: string) {
   return [parentWindow, childWindow] as const;
 }
 
-function makeHandshake(_windows?: [Window, Window]) {
+function makeHandshake(
+  _windows?: [Window, Window]
+): Promise<
+  [
+    Connection<ParentEvents, ChildMethods, ChildEvents>,
+    Connection<ChildEvents, ParentMethods, ParentEvents>
+  ]
+> {
   let windows =
     _windows ||
     makeWindows('https://parent.example.com', 'https://child.example.com');
   const [parentWindow, childWindow] = windows;
 
   const handshakes = [
-    ParentHandshake<ParentMethods, ParentEvents, ChildMethods, ChildEvents>(
-      childWindow.origin,
-      childWindow,
+    ParentHandshake(
       parentMethods,
+      childWindow,
+      childWindow.origin,
       parentWindow
     ),
-    ChildHandshake<ChildMethods, ChildEvents, ParentMethods, ParentEvents>(
-      parentWindow.origin,
-      childMethods,
-      childWindow
-    ),
+    ChildHandshake(childMethods, parentWindow.origin, childWindow),
   ] as const;
 
   return Promise.all(handshakes);
@@ -353,12 +357,12 @@ test('handshake-fail', () => {
     const maxRunTime = 500;
 
     const parentHandshake = ParentHandshake(
-      childWindow.origin,
-      childWindow,
       {},
+      childWindow,
+      childWindow.origin,
       parentWindow
     );
-    const childHandshake = ChildHandshake(wrongParentOrigin, {}, childWindow);
+    const childHandshake = ChildHandshake({}, wrongParentOrigin, childWindow);
 
     parentHandshake.then((_connection) => {
       reject(new Error('The handshake should be failing. - parent'));

@@ -1,12 +1,14 @@
 import { IdType } from './common';
-import { MethodsType, EventsType } from './handle';
+import { MethodsType } from './handle';
 import { Connection, ConcreteConnection } from './connection';
 import {
   createHandshakeMessage,
   isHandshakeMessage,
   createResponsMessage,
   isResponseMessage,
+  Message,
 } from './message';
+import { isWindow } from './worker';
 
 const uniqueSessionId: () => IdType = (() => {
   let __sessionId = 0;
@@ -19,43 +21,125 @@ const uniqueSessionId: () => IdType = (() => {
 
 export const HANDSHAKE_SUCCESS = '@post-me/handshake-success';
 
-export function ParentHandshake<
-  M0 extends MethodsType,
-  E0 extends EventsType,
-  M1 extends MethodsType,
-  E1 extends EventsType
->(
-  otherOrigin: string,
-  otherWindow: Window,
+const makeWindowPostMessage = (w: Window, origin: string) => {
+  return (message: Message<any>) => {
+    w.postMessage(message, origin);
+  };
+};
+
+const makeWorkerPostMessage = (w: Worker | DedicatedWorkerGlobalScope) => {
+  return (message: Message<any>) => {
+    w.postMessage(message);
+  };
+};
+
+const makeWindowAddMessageListener = (w: Window, acceptedOrigin: string) => {
+  const acceptEvent = (event: MessageEvent) => {
+    const { origin } = event;
+
+    if (origin !== acceptedOrigin && acceptedOrigin !== '*') {
+      return false;
+    }
+
+    return true;
+  };
+  return (listener: (event: MessageEvent) => void) => {
+    const outerListener = (event: MessageEvent) => {
+      if (acceptEvent(event)) {
+        listener(event);
+      }
+    };
+
+    w.addEventListener('message', outerListener);
+
+    const removeListener = () => {
+      w.removeEventListener('message', outerListener);
+    };
+
+    return removeListener;
+  };
+};
+
+const makeWorkerAddMessageListener = (w: Worker | WorkerGlobalScope) => {
+  const acceptEvent = (_event: MessageEvent) => {
+    return true;
+  };
+  return (listener: (message: MessageEvent) => void) => {
+    const outerListener = (event: any) => {
+      if (acceptEvent(event)) {
+        listener(event);
+      }
+    };
+
+    w.addEventListener('message', outerListener);
+
+    const removeListener = () => {
+      w.removeEventListener('message', outerListener);
+    };
+
+    return removeListener;
+  };
+};
+
+export function ParentHandshake<M0 extends MethodsType>(
   localMethods: M0,
-  _thisWindow?: Window
-): Promise<Connection<E0, M1, E1>> {
+  otherWindow: Window | Worker,
+  acceptedOrigin: string,
+  _thisWindow?: Window | DedicatedWorkerGlobalScope
+): Promise<Connection> {
   const thisWindow = _thisWindow || window;
 
   const thisSessionId = uniqueSessionId();
 
-  return new Promise<ConcreteConnection<M0, E0, M1, E1>>((resolve, reject) => {
-    const handshakeListener = (event: MessageEvent) => {
-      const { origin, source, data } = event;
+  return new Promise<ConcreteConnection<M0>>((resolve, reject) => {
+    let postMessage: ((message: Message<any>) => void) | undefined;
+    let addMessageListener:
+      | ((listener: (event: MessageEvent) => void) => () => void)
+      | undefined;
 
-      if ((origin !== otherOrigin && otherOrigin !== '*') || !source) {
-        return;
-      }
+    if (isWindow(otherWindow)) {
+      postMessage = makeWindowPostMessage(otherWindow, acceptedOrigin);
+    } else {
+      postMessage = makeWorkerPostMessage(otherWindow);
+    }
+
+    if (isWindow(thisWindow) && isWindow(otherWindow)) {
+      addMessageListener = makeWindowAddMessageListener(
+        thisWindow,
+        acceptedOrigin
+      );
+    }
+
+    if (isWindow(thisWindow) && !isWindow(otherWindow)) {
+      addMessageListener = makeWorkerAddMessageListener(otherWindow);
+    }
+
+    if (postMessage === undefined || addMessageListener === undefined) {
+      reject(new Error('post-me does not work yet with this type of worker.'));
+      return;
+    }
+
+    let removeHandshakeListener: () => void;
+
+    const handshakeListener = (event: MessageEvent) => {
+      const { data } = event;
 
       if (isResponseMessage(data)) {
         const { sessionId, requestId, result } = data;
+
         if (
           sessionId === thisSessionId &&
           requestId === thisSessionId &&
           result === HANDSHAKE_SUCCESS
         ) {
-          thisWindow.removeEventListener('message', handshakeListener);
+          removeHandshakeListener();
           resolve(
             new ConcreteConnection(
               localMethods,
-              thisWindow,
-              source,
-              origin,
+              postMessage as (message: Message<any>) => void,
+              addMessageListener as (
+                listener: (event: MessageEvent) => void
+              ) => () => void,
               sessionId
             )
           );
@@ -63,66 +147,83 @@ export function ParentHandshake<
       }
     };
 
-    thisWindow.addEventListener('message', handshakeListener);
-
-    if (otherOrigin === '*') {
-      console.warn(
-        'In order to prevent cross-origin attacks, it is strongly adviced to provide an explicit origin instead of "*"'
-      );
-    }
+    removeHandshakeListener = addMessageListener(handshakeListener);
 
     const message = createHandshakeMessage(thisSessionId);
-    otherWindow.postMessage(message, otherOrigin);
+    postMessage(message);
   });
 }
 
-export function ChildHandshake<
-  M0 extends MethodsType,
-  E0 extends EventsType,
-  M1 extends MethodsType,
-  E1 extends EventsType
->(
-  otherOrigin: string,
+export function ChildHandshake<M0 extends MethodsType>(
   localMethods: M0,
-  _thisWindow?: Window
-): Promise<Connection<E0, M1, E1>> {
+  acceptedOrigin: string,
+  _thisWindow?: Window | DedicatedWorkerGlobalScope
+): Promise<Connection> {
   const thisWindow = _thisWindow || window;
 
-  return new Promise<ConcreteConnection<M0, E0, M1, E1>>((resolve, reject) => {
-    const handshakeListener = (event: MessageEvent) => {
-      const { origin, source, data } = event;
+  return new Promise<ConcreteConnection<M0>>((resolve, reject) => {
+    let postMessage: ((message: Message<any>) => void) | undefined;
+    let addMessageListener:
+      | ((listener: (event: MessageEvent) => void) => () => void)
+      | undefined;
 
-      if ((origin !== otherOrigin && otherOrigin !== '*') || !source) {
-        return;
-      }
+    if (isWindow(thisWindow)) {
+      addMessageListener = makeWindowAddMessageListener(
+        thisWindow,
+        acceptedOrigin
+      );
+    } else {
+      addMessageListener = makeWorkerAddMessageListener(thisWindow);
+    }
+
+    if (addMessageListener === undefined) {
+      reject(new Error('post-me does not work yet with this type of worker.'));
+      return;
+    }
+
+    let removeHandshakeListener: () => void;
+
+    const handshakeListener = (event: MessageEvent) => {
+      const { source, data } = event;
 
       if (isHandshakeMessage(data)) {
-        if (otherOrigin === '*') {
-          console.warn(
-            'In order to prevent cross-origin attacks, it is strongly adviced to provide an explicit origin instead of "*"'
+        removeHandshakeListener();
+
+        if (source && isWindow(source)) {
+          postMessage = makeWindowPostMessage(source as any, acceptedOrigin);
+        } else if (!source && !isWindow(thisWindow)) {
+          postMessage = makeWorkerPostMessage(thisWindow);
+        }
+
+        if (postMessage === undefined) {
+          reject(
+            new Error('post-me does not work yet with this type of worker.')
           );
+          return;
         }
 
         const { sessionId, requestId } = data;
-        thisWindow.removeEventListener('message', handshakeListener);
+
         const message = createResponsMessage(
           sessionId,
           requestId,
           HANDSHAKE_SUCCESS
         );
-        (source as any).postMessage(message, otherOrigin);
+        postMessage(message);
+
         resolve(
           new ConcreteConnection(
             localMethods,
-            thisWindow,
-            source,
-            origin,
+            postMessage,
+            addMessageListener as (
+              listener: (event: MessageEvent) => void
+            ) => () => void,
             sessionId
           )
         );
       }
     };
 
-    thisWindow.addEventListener('message', handshakeListener);
+    removeHandshakeListener = addMessageListener(handshakeListener);
   });
 }
