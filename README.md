@@ -1,4 +1,5 @@
 ![workflow status](https://github.com/alesgenova/post-me/workflows/main/badge.svg?branch=main)
+[![npm package](https://img.shields.io/npm/v/post-me.svg)](https://www.npmjs.com/package/post-me)
 # post-me
 
 `post-me` is a library that facilitates two way communication between windows, for example between a parent and an iframe, a worker, a tab, or a popup.
