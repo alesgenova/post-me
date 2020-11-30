@@ -1,7 +1,7 @@
 {
   "name": "post-me",
   "version": "0.1.0",
-  "description": "A library to facilitate communication between windows (iframes, popups, ..)",
+  "description": "A library to facilitate communication between windows (iframe, worker, popup, ...)",
   "main": "dist/index.umd.js",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
@@ -48,5 +48,14 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "keywords": [
+    "communication",
+    "postmessage",
+    "iframe",
+    "worker",
+    "webworker",
+    "typescript",
+    "postmate"
+  ]
 }
