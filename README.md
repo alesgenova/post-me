@@ -15,7 +15,7 @@ Under the hood `post-me` uses the low level [`postMessage`](https://developer.mo
   - Create multiple concurrent connections.
 
 ## Demo
-In this [live demo]() a parent window achieves two-way communication with its 5 children (4 iframes and 1 web worker).
+In this [live demo](https://alesgenova.github.io/post-me/) a parent window achieves two-way communication with its 5 children (4 iframes and 1 web worker).
 
 ## Usage
 To establish a connection between two windows follow the steps below:
