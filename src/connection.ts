@@ -14,9 +14,9 @@ import {
 } from './message';
 
 export interface Connection<
-  E0 extends EventsType,
-  M1 extends MethodsType,
-  E1 extends EventsType
+  E0 extends EventsType = {},
+  M1 extends MethodsType = {},
+  E1 extends EventsType = {}
 > {
   sessionId: () => IdType;
   localHandle: () => LocalHandle<E0>;
@@ -29,33 +29,28 @@ type PromiseMethods<T = any, E = any> = {
   reject: (e: E) => void;
 };
 
-export class ConcreteConnection<
-  M0 extends MethodsType,
-  E0 extends EventsType,
-  M1 extends MethodsType,
-  E1 extends EventsType
-> implements Connection<E0, M1, E1> {
-  private localMethods: M0;
-  private localWindow: Window;
-  private remoteWindow: MessageEventSource;
-  private remoteOrigin: string;
+export class ConcreteConnection<M0 extends MethodsType> implements Connection {
+  private _localMethods: M0;
+  private _postMessage: (message: Message<any>) => void;
+  private _addMessageListener: (
+    listener: (event: MessageEvent) => void
+  ) => () => void;
+  private _removeMainListener: () => void;
   private _sessionId: IdType;
-  private _localHandle: LocalHandle<E0>;
-  private _remoteHandle: RemoteHandle<M1, E1>;
+  private _localHandle: LocalHandle;
+  private _remoteHandle: RemoteHandle;
   private _requests: Record<IdType, PromiseMethods>;
   private _eventListeners: Record<string, Set<(data: any) => void>>;
 
   constructor(
     localMethods: M0,
-    localWindow: Window,
-    remoteWindow: MessageEventSource,
-    remoteOrigin: string,
+    postMessage: (message: Message<any>) => void,
+    addMessageListener: (listener: (event: MessageEvent) => void) => () => void,
     sessionId: number
   ) {
-    this.localMethods = localMethods;
-    this.localWindow = localWindow;
-    this.remoteWindow = remoteWindow;
-    this.remoteOrigin = remoteOrigin;
+    this._localMethods = localMethods;
+    this._postMessage = postMessage;
+    this._addMessageListener = addMessageListener;
     this._sessionId = sessionId;
     this._requests = {};
     this._eventListeners = {};
@@ -70,7 +65,7 @@ export class ConcreteConnection<
       removeEventListener: this.remoteRemoveEventListener,
     };
 
-    this.localWindow.addEventListener('message', this.onMessage);
+    this._removeMainListener = this._addMessageListener(this.onMessage);
   }
 
   localHandle() {
@@ -85,15 +80,14 @@ export class ConcreteConnection<
     return this._sessionId;
   }
 
-  destroy() {}
+  destroy() {
+    this._removeMainListener();
+  }
 
   private onMessage = (ev: MessageEvent) => {
-    const { origin, data } = ev;
+    const { data } = ev;
 
-    if (
-      (origin !== this.remoteOrigin && this.remoteOrigin !== '*') ||
-      !isMessage(data)
-    ) {
+    if (!isMessage(data)) {
       return;
     }
 
@@ -155,10 +149,7 @@ export class ConcreteConnection<
     }
   };
 
-  private localEmit: <K extends keyof E0>(eventName: K, data: E0[K]) => void = (
-    eventName,
-    data
-  ) => {
+  private localEmit = (eventName: string, data: any) => {
     const message = createEventMessage(
       this.sessionId(),
       eventName as string,
@@ -167,11 +158,8 @@ export class ConcreteConnection<
     this.sendMessage(message);
   };
 
-  private remoteCall: <K extends keyof M1>(
-    methodName: K,
-    ...args: Parameters<M1[K]>
-  ) => Promise<InnerType<ReturnType<M1[K]>>> = (methodName, ...args) => {
-    return new Promise((resolve, reject) => {
+  private remoteCall = (methodName: string, ...args: any[]) => {
+    return new Promise<any>((resolve, reject) => {
       const requestId = this.uniqueRequestId();
       this._requests[requestId] = { resolve, reject };
       const message = createCallMessage(
@@ -189,7 +177,7 @@ export class ConcreteConnection<
     ...args: Parameters<M0[K]>
   ) => Promise<InnerType<ReturnType<M0[K]>>> = (methodName, ...args) => {
     return new Promise((resolve, reject) => {
-      const method = this.localMethods[methodName];
+      const method = this._localMethods[methodName];
       if (!method) {
         reject(
           new Error(`The method "${methodName}" has not been implemented.`)
@@ -203,10 +191,10 @@ export class ConcreteConnection<
     });
   };
 
-  private remoteAddEventListener: <K extends keyof E1>(
-    eventName: K,
-    callback: (data: E1[K]) => void
-  ) => void = (eventName, callback) => {
+  private remoteAddEventListener = (
+    eventName: string,
+    callback: (data: any) => void
+  ) => {
     let listeners = this._eventListeners[eventName as string];
     if (!listeners) {
       listeners = new Set();
@@ -216,10 +204,10 @@ export class ConcreteConnection<
     listeners.add(callback);
   };
 
-  private remoteRemoveEventListener: <K extends keyof E1>(
-    eventName: K,
-    callback: (data: E1[K]) => void
-  ) => void = (eventName, callback) => {
+  private remoteRemoveEventListener = (
+    eventName: string,
+    callback: (data: any) => void
+  ) => {
     let listeners = this._eventListeners[eventName as string];
     if (!listeners) {
       return;
@@ -229,7 +217,7 @@ export class ConcreteConnection<
   };
 
   private sendMessage(message: Message<any>) {
-    (this.remoteWindow as Window).postMessage(message, this.remoteOrigin);
+    this._postMessage(message);
   }
 
   private uniqueRequestId: () => IdType = (() => {

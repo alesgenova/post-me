@@ -22,7 +22,7 @@ const methods = {
   },
 };
 
-ChildHandshake('*', methods).then((connection) => {
+ChildHandshake(methods, '*').then((connection) => {
   const localHandle = connection.localHandle();
   const remoteHandle = connection.remoteHandle();
 
