@@ -111,6 +111,10 @@ function makeHandshake(
   return Promise.all(handshakes);
 }
 
+function sleep(duration: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, duration));
+}
+
 test('handshake', () => {
   return new Promise<void>((resolve) => {
     makeHandshake().then(([parentConnection, childConnection]) => {
@@ -555,4 +559,53 @@ test('multi-connection', () => {
       }
     );
   });
+});
+
+test('parent handshake before child', async () => {
+  const parentOrigin = 'https://parent.example.com';
+  const childOrigin = 'https://child.example.com';
+  const [parentWindow, childWindow] = makeWindows(parentOrigin, childOrigin);
+  let parentConnection: Promise<Connection>,
+    childConnection: Promise<Connection>;
+
+  const parentMessenger = new WindowMessenger({
+    localWindow: parentWindow,
+    remoteWindow: childWindow,
+    remoteOrigin: childWindow.origin,
+  });
+  parentConnection = ParentHandshake(parentMethods, parentMessenger);
+
+  await sleep(100);
+
+  const childMessenger = new WindowMessenger({
+    localWindow: childWindow,
+    remoteOrigin: parentWindow.origin,
+  });
+  childConnection = ChildHandshake(childMethods, childMessenger);
+  await Promise.all([parentConnection, childConnection]);
+});
+
+test('child handshake before parent', async () => {
+  const parentOrigin = 'https://parent.example.com';
+  const childOrigin = 'https://child.example.com';
+  const [parentWindow, childWindow] = makeWindows(parentOrigin, childOrigin);
+  let parentConnection: Promise<Connection>,
+    childConnection: Promise<Connection>;
+
+  const childMessenger = new WindowMessenger({
+    localWindow: childWindow,
+    remoteOrigin: parentWindow.origin,
+  });
+  childConnection = ChildHandshake(childMethods, childMessenger);
+
+  await sleep(100);
+
+  const parentMessenger = new WindowMessenger({
+    localWindow: parentWindow,
+    remoteWindow: childWindow,
+    remoteOrigin: childWindow.origin,
+  });
+  parentConnection = ParentHandshake(parentMethods, parentMessenger);
+
+  await Promise.all([childConnection, parentConnection]);
 });
