@@ -106,6 +106,10 @@ function makeHandshake(
   return Promise.all(handshakes);
 }
 
+function sleep(duration: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, duration));
+}
+
 test('handshake', () => {
   return new Promise<void>((resolve) => {
     makeHandshake().then(([parentConnection, childConnection]) => {
@@ -545,4 +549,38 @@ test('multi-connection', () => {
       }
     );
   });
+});
+
+test('parent handshake before child', async () => {
+  const parentOrigin = 'https://parent.example.com';
+  const childOrigin = 'https://child.example.com';
+  const [parentWindow, childWindow] = makeWindows(parentOrigin, childOrigin);
+  let parentConnection: Promise<Connection>,
+    childConnection: Promise<Connection>;
+  parentConnection = ParentHandshake(
+    {},
+    childWindow,
+    childWindow.origin,
+    parentWindow
+  );
+  await sleep(100);
+  childConnection = ChildHandshake({}, parentWindow.origin, childWindow);
+  await Promise.all([parentConnection, childConnection]);
+});
+
+test('child handshake before parent', async () => {
+  const parentOrigin = 'https://parent.example.com';
+  const childOrigin = 'https://child.example.com';
+  const [parentWindow, childWindow] = makeWindows(parentOrigin, childOrigin);
+  let parentConnection: Promise<Connection>,
+    childConnection: Promise<Connection>;
+  childConnection = ChildHandshake({}, parentWindow.origin, childWindow);
+  await sleep(100);
+  parentConnection = ParentHandshake(
+    {},
+    childWindow,
+    childWindow.origin,
+    parentWindow
+  );
+  await Promise.all([childConnection, parentConnection]);
 });

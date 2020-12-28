@@ -7,6 +7,7 @@ import {
   createResponsMessage,
   isResponseMessage,
   Message,
+  HandshakeMessage,
 } from './message';
 import { isWindow } from './worker';
 
@@ -81,6 +82,20 @@ const makeWorkerAddMessageListener = (w: Worker | WorkerGlobalScope) => {
   };
 };
 
+const runUntil = (
+  worker: () => void,
+  condition: () => boolean,
+  attemptInterval = 50
+): void => {
+  const fn = () => {
+    worker();
+    if (!condition()) {
+      setTimeout(fn, attemptInterval);
+    }
+  };
+  fn();
+};
+
 export function ParentHandshake<M0 extends MethodsType>(
   localMethods: M0,
   otherWindow: Window | Worker,
@@ -120,6 +135,7 @@ export function ParentHandshake<M0 extends MethodsType>(
     }
 
     let removeHandshakeListener: () => void;
+    let connected = false;
 
     const handshakeListener = (event: MessageEvent) => {
       const { data } = event;
@@ -132,6 +148,7 @@ export function ParentHandshake<M0 extends MethodsType>(
           requestId === thisSessionId &&
           result === HANDSHAKE_SUCCESS
         ) {
+          connected = true;
           removeHandshakeListener();
           resolve(
             new ConcreteConnection(
@@ -149,8 +166,13 @@ export function ParentHandshake<M0 extends MethodsType>(
 
     removeHandshakeListener = addMessageListener(handshakeListener);
 
-    const message = createHandshakeMessage(thisSessionId);
-    postMessage(message);
+    runUntil(
+      () => {
+        const message = createHandshakeMessage(thisSessionId);
+        (postMessage as any)(message);
+      },
+      () => connected
+    );
   });
 }
 
@@ -182,11 +204,13 @@ export function ChildHandshake<M0 extends MethodsType>(
     }
 
     let removeHandshakeListener: () => void;
+    let connected = false;
 
     const handshakeListener = (event: MessageEvent) => {
       const { source, data } = event;
 
       if (isHandshakeMessage(data)) {
+        connected = true;
         removeHandshakeListener();
 
         if (source && isWindow(source)) {
@@ -204,12 +228,17 @@ export function ChildHandshake<M0 extends MethodsType>(
 
         const { sessionId, requestId } = data;
 
-        const message = createResponsMessage(
-          sessionId,
-          requestId,
-          HANDSHAKE_SUCCESS
+        runUntil(
+          () => {
+            const message = createResponsMessage(
+              sessionId,
+              requestId,
+              HANDSHAKE_SUCCESS
+            );
+            (postMessage as any)(message);
+          },
+          () => connected
         );
-        postMessage(message);
 
         resolve(
           new ConcreteConnection(
