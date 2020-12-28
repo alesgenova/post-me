@@ -1,5 +1,6 @@
 import { ParentHandshake, ChildHandshake } from '../src/handshake';
 import { Connection } from '../src/connection';
+import { WindowMessenger } from '../src/messenger';
 
 import { JSDOM } from 'jsdom';
 
@@ -93,14 +94,18 @@ function makeHandshake(
     makeWindows('https://parent.example.com', 'https://child.example.com');
   const [parentWindow, childWindow] = windows;
 
+  const parentMessenger = new WindowMessenger({
+    localWindow: parentWindow,
+    remoteWindow: childWindow,
+    remoteOrigin: childWindow.origin,
+  });
+  const childMessenger = new WindowMessenger({
+    localWindow: childWindow,
+    remoteOrigin: parentWindow.origin,
+  });
   const handshakes = [
-    ParentHandshake(
-      parentMethods,
-      childWindow,
-      childWindow.origin,
-      parentWindow
-    ),
-    ChildHandshake(childMethods, parentWindow.origin, childWindow),
+    ParentHandshake(parentMethods, parentMessenger),
+    ChildHandshake(childMethods, childMessenger),
   ] as const;
 
   return Promise.all(handshakes);
@@ -356,13 +361,18 @@ test('handshake-fail', () => {
 
     const maxRunTime = 500;
 
-    const parentHandshake = ParentHandshake(
-      {},
-      childWindow,
-      childWindow.origin,
-      parentWindow
-    );
-    const childHandshake = ChildHandshake({}, wrongParentOrigin, childWindow);
+    const parentMessenger = new WindowMessenger({
+      localWindow: parentWindow,
+      remoteWindow: childWindow,
+      remoteOrigin: childOrigin,
+    });
+    const childMessenger = new WindowMessenger({
+      localWindow: childWindow,
+      remoteOrigin: wrongParentOrigin,
+    });
+
+    const parentHandshake = ParentHandshake({}, parentMessenger);
+    const childHandshake = ChildHandshake({}, childMessenger);
 
     parentHandshake.then((_connection) => {
       reject(new Error('The handshake should be failing. - parent'));
