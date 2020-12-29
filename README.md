@@ -49,9 +49,10 @@ const methods = {
 }
 
 // Start the handshake
+// For safety it is strongly adviced to pass the explicit child origin instead of '*'
 const messenger = new WindowMessenger({
   remoteWindow: childWindow,
-  remoteOrigin: childWindow.origin
+  remoteOrigin: '*'
 });
 ParentHandshake(methods, messenger);
   .then((connection) => {
@@ -86,6 +87,10 @@ const methods = {
 
 // Start the handshake
 // For safety it is strongly adviced to pass the explicit parent origin instead of '*'
+const messenger = new WindowMessenger({
+  remoteWindow: window.parent,
+  remoteOrigin: '*'
+});
 const messenger = new WindowMessenger({ remoteOrigin: '*' });
 ChildHandshake(methods, messenger)
   .then((connection) => {
@@ -156,9 +161,10 @@ const methods: ParentMethods = {
 }
 
 // Start the handshake
+// For safety it is strongly adviced to pass the explicit child origin instead of '*'
 const messenger = new WindowMessenger({
   remoteWindow: childWindow,
-  remoteOrigin: childWindow.origin
+  remoteOrigin: '*'
 });
 ParentHandshake(methods, messenger);
   .then((connection: Connection<ParentEvents, ChildMethods, ChildEvents>) => {
@@ -195,8 +201,11 @@ const methods: ChildMethods = {
 
 // Start the handshake
 // For safety it is strongly adviced to pass the explicit parent origin instead of '*'
-const messenger = new WindowMessenger({ remoteOrigin: '*' });
-ChildHandshake(methods, parentOrigin)
+const messenger = new WindowMessenger({
+  remoteWindow: window.parent,
+  remoteOrigin: '*'
+});
+ChildHandshake(methods, messenger)
   .then((connection: Connection<ChildEvents, ParentMethods, ParentEvents>) => {
     const localHandle = connection.localHandle();
     const remoteHandle = connection.remoteHandle();

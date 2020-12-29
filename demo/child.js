@@ -24,6 +24,7 @@ const methods = {
 
 const messenger = new WindowMessenger({
   localWindow: window,
+  remoteWindow: window.parent,
   remoteOrigin: '*',
 });
 ChildHandshake(methods, messenger).then((connection) => {

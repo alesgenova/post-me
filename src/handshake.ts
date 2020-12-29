@@ -7,8 +7,6 @@ import {
   isHandshakeMessage,
   createResponsMessage,
   isResponseMessage,
-  Message,
-  HandshakeMessage,
 } from './message';
 
 const uniqueSessionId: () => IdType = (() => {
