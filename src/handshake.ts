@@ -28,8 +28,8 @@ const runUntil = (
   attemptInterval = 50
 ): void => {
   const fn = () => {
-    worker();
     if (!condition()) {
+      worker();
       setTimeout(fn, attemptInterval);
     }
   };
