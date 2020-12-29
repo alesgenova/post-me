@@ -1,4 +1,8 @@
-import { ParentHandshake } from './post-me.esm.js';
+import {
+  ParentHandshake,
+  WindowMessenger,
+  WorkerMessenger,
+} from './post-me.esm.js';
 
 let title = 'Parent';
 let color = '#eeeeee';
@@ -57,17 +61,13 @@ const createChildWindow = (i) => {
   });
 };
 
-// const createChildWindow = (i) => {
-//   return new Promise((resolve) => {
-//     const childWindow = window.open('./child.html', '_blank');
-//     childWindow.onload = () => {
-//       resolve(childWindow);
-//     }
-//   })
-// }
-
 const makeHandshake = (i, childWindow) => {
-  return ParentHandshake(methods, childWindow, childWindow.origin);
+  const messenger = new WindowMessenger({
+    localWindow: window,
+    remoteWindow: childWindow,
+    remoteOrigin: '*',
+  });
+  return ParentHandshake(methods, messenger);
 };
 
 const createChildControls = (i, controlsContainer, connection) => {
@@ -161,7 +161,9 @@ children.forEach((i) => initChild(i));
 {
   const worker = new Worker('./worker.js');
 
-  ParentHandshake(window.origin, worker, {}).then((connection) => {
+  const messenger = new WorkerMessenger({ worker });
+
+  ParentHandshake({}, messenger).then((connection) => {
     const remoteHandle = connection.remoteHandle();
 
     const title = document.createElement('h4');

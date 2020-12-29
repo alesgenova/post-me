@@ -1,4 +1,4 @@
-import { ChildHandshake } from './post-me.esm.js';
+import { ChildHandshake, WindowMessenger } from './post-me.esm.js';
 
 let title = '';
 let color = '#ffffff';
@@ -22,7 +22,11 @@ const methods = {
   },
 };
 
-ChildHandshake(methods, '*').then((connection) => {
+const messenger = new WindowMessenger({
+  localWindow: window,
+  remoteOrigin: '*',
+});
+ChildHandshake(methods, messenger).then((connection) => {
   const localHandle = connection.localHandle();
   const remoteHandle = connection.remoteHandle();
 

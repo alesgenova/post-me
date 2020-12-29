@@ -1,4 +1,5 @@
 import { IdType, InnerType } from './common';
+import { Messenger } from './messenger';
 import { LocalHandle, RemoteHandle, MethodsType, EventsType } from './handle';
 import {
   Message,
@@ -31,10 +32,7 @@ type PromiseMethods<T = any, E = any> = {
 
 export class ConcreteConnection<M0 extends MethodsType> implements Connection {
   private _localMethods: M0;
-  private _postMessage: (message: Message<any>) => void;
-  private _addMessageListener: (
-    listener: (event: MessageEvent) => void
-  ) => () => void;
+  private _messenger: Messenger;
   private _removeMainListener: () => void;
   private _sessionId: IdType;
   private _localHandle: LocalHandle;
@@ -42,15 +40,9 @@ export class ConcreteConnection<M0 extends MethodsType> implements Connection {
   private _requests: Record<IdType, PromiseMethods>;
   private _eventListeners: Record<string, Set<(data: any) => void>>;
 
-  constructor(
-    localMethods: M0,
-    postMessage: (message: Message<any>) => void,
-    addMessageListener: (listener: (event: MessageEvent) => void) => () => void,
-    sessionId: number
-  ) {
+  constructor(localMethods: M0, messenger: Messenger, sessionId: number) {
     this._localMethods = localMethods;
-    this._postMessage = postMessage;
-    this._addMessageListener = addMessageListener;
+    this._messenger = messenger;
     this._sessionId = sessionId;
     this._requests = {};
     this._eventListeners = {};
@@ -65,7 +57,9 @@ export class ConcreteConnection<M0 extends MethodsType> implements Connection {
       removeEventListener: this.remoteRemoveEventListener,
     };
 
-    this._removeMainListener = this._addMessageListener(this.onMessage);
+    this._removeMainListener = this._messenger.addMessageListener(
+      this.onMessage
+    );
   }
 
   localHandle() {
@@ -217,7 +211,7 @@ export class ConcreteConnection<M0 extends MethodsType> implements Connection {
   };
 
   private sendMessage(message: Message<any>) {
-    this._postMessage(message);
+    this._messenger.postMessage(message);
   }
 
   private uniqueRequestId: () => IdType = (() => {

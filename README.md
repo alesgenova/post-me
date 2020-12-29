@@ -34,7 +34,7 @@ Refer to the code snippet below as an example of these steps.
 
 ### Parent code
 ```typescript
-import { ParentHandshake } from 'post-me';
+import { ParentHandshake, WindowMessenger } from 'post-me';
 
 // Create the child window any way you like (iframe here, but could be popup or tab too)
 const childFrame = document.createElement('iframe');
@@ -49,7 +49,11 @@ const methods = {
 }
 
 // Start the handshake
-ParentHandshake(methods, childWindow, childWindow.origin);
+const messenger = new WindowMessenger({
+  remoteWindow: childWindow,
+  remoteOrigin: childWindow.origin
+});
+ParentHandshake(methods, messenger);
   .then((connection) => {
     const localHandle = connection.localHandle();
     const remoteHandle = connection.remoteHandle();
@@ -72,7 +76,7 @@ ParentHandshake(methods, childWindow, childWindow.origin);
 
 ### Child code
 ```typescript
-import { ChildHandshake } from 'post-me';
+import { ChildHandshake, WindowMessenger } from 'post-me';
 
 // Define the methods you want to expose to the other window.
 // Methods can either return values or Promises
@@ -82,8 +86,8 @@ const methods = {
 
 // Start the handshake
 // For safety it is strongly adviced to pass the explicit parent origin instead of '*'
-const parentOrigin = '*';
-ChildHandshake(methods, parentOrigin)
+const messenger = new WindowMessenger({ remoteOrigin: '*' });
+ChildHandshake(methods, messenger)
   .then((connection) => {
     const localHandle = connection.localHandle();
     const remoteHandle = connection.remoteHandle();
@@ -135,7 +139,7 @@ export type ChildEvents = {
 
 ### Parent code
 ```typescript
-import { ParentHandshake, Connection } from 'post-me';
+import { ParentHandshake, WindowMessenger, Connection } from 'post-me';
 
 import { ParentMethods, ParentEvents, ChildMethods, ChildEvents} from '/path/to/common';
 
@@ -152,7 +156,11 @@ const methods: ParentMethods = {
 }
 
 // Start the handshake
-ParentHandshake(methods, childWindow, childWindow.origin);
+const messenger = new WindowMessenger({
+  remoteWindow: childWindow,
+  remoteOrigin: childWindow.origin
+});
+ParentHandshake(methods, messenger);
   .then((connection: Connection<ParentEvents, ChildMethods, ChildEvents>) => {
     const localHandle = connection.localHandle();
     const remoteHandle = connection.remoteHandle();
@@ -175,7 +183,7 @@ ParentHandshake(methods, childWindow, childWindow.origin);
 
 ### Child code
 ```typescript
-import { ChildHandshake, Connection } from 'post-me';
+import { ChildHandshake, WindowMessenger, Connection } from 'post-me';
 
 import { ParentMethods, ParentEvents, ChildMethods, ChildEvents} from '/path/to/common';
 
@@ -187,7 +195,7 @@ const methods: ChildMethods = {
 
 // Start the handshake
 // For safety it is strongly adviced to pass the explicit parent origin instead of '*'
-const parentOrigin = '*';
+const messenger = new WindowMessenger({ remoteOrigin: '*' });
 ChildHandshake(methods, parentOrigin)
   .then((connection: Connection<ChildEvents, ParentMethods, ParentEvents>) => {
     const localHandle = connection.localHandle();
@@ -213,3 +221,46 @@ ChildHandshake(methods, parentOrigin)
 A minimal example of using `post-me` with a web worker can be found in the demo source code.
   - Parent: [source](https://github.com/alesgenova/post-me/blob/main/demo/parent.js#L162-L165)
   - Worker: [source](https://github.com/alesgenova/post-me/blob/main/demo/worker.js)
+
+### Parent code
+```typescript
+import { ParentHandshake, WorkerMessenger } from 'post-me';
+
+// Create a dedicated web worker.
+const worker = new Worker('./worker.js');
+
+// Start the handshake
+const messenger = new WorkerMessenger({ worker });
+const methods = {};
+
+ParentHandshake(methods, messenger).then((connection) => {
+  const remoteHandle = connection.remoteHandle();
+
+  // Call a method on the worker
+  remoteHandle.call('sum', 3, 4)
+    .then((value) => {
+      console.log(value); // 7
+    });
+
+  remoteHandle.call('mul', 3, 4)
+    .then((value) => {
+      console.log(value); // 12
+    });
+})
+```
+
+### Worker code
+```typescript
+importScripts('./post-me.umd.js');
+const PostMe = self['post-me'];
+
+const methods = {
+  sum: (x, y) => x + y,
+  mul: (x, y) => x * y,
+};
+
+const messenger = new PostMe.WorkerMessenger({ worker: self });
+PostMe.ChildHandshake(methods, messenger).then((_connection) => {
+  console.log('Worker successfully connected');
+});
+```

@@ -6,6 +6,7 @@ const methods = {
   mul: (x, y) => x * y,
 };
 
-PostMe.ChildHandshake(methods, '*', self).then((_connection) => {
+const messenger = new PostMe.WorkerMessenger({ worker: self });
+PostMe.ChildHandshake(methods, messenger).then((_connection) => {
   console.log('Worker successfully connected');
 });
