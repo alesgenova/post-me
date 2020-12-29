@@ -2,7 +2,7 @@ import {
   ParentHandshake,
   WindowMessenger,
   WorkerMessenger,
-} from './post-me.esm.js';
+} from './ibridge.esm.js';
 
 let title = 'Parent';
 let color = '#eeeeee';

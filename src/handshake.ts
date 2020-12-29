@@ -18,7 +18,7 @@ const uniqueSessionId: () => IdType = (() => {
   };
 })();
 
-export const HANDSHAKE_SUCCESS = '@post-me/handshake-success';
+export const HANDSHAKE_SUCCESS = '@ibridge/handshake-success';
 
 const runUntil = (
   worker: () => void,
