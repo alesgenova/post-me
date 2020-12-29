@@ -7,6 +7,8 @@ import {
   isHandshakeMessage,
   createResponsMessage,
   isResponseMessage,
+  Message,
+  HandshakeMessage,
 } from './message';
 
 const uniqueSessionId: () => IdType = (() => {
@@ -20,14 +22,34 @@ const uniqueSessionId: () => IdType = (() => {
 
 export const HANDSHAKE_SUCCESS = '@post-me/handshake-success';
 
+const runUntil = (
+  worker: () => void,
+  condition: () => boolean,
+  maxAttempts: number,
+  attemptInterval: number
+): void => {
+  let attempt = 0;
+  const fn = () => {
+    if (!condition() && (attempt < maxAttempts || maxAttempts < 1)) {
+      worker();
+      attempt += 1;
+      setTimeout(fn, attemptInterval);
+    }
+  };
+  fn();
+};
+
 export function ParentHandshake<M0 extends MethodsType>(
   localMethods: M0,
-  messenger: Messenger
+  messenger: Messenger,
+  maxAttempts: number = 5,
+  attemptsInterval: number = 50
 ): Promise<Connection> {
   const thisSessionId = uniqueSessionId();
 
   return new Promise<ConcreteConnection<M0>>((resolve, reject) => {
     let removeHandshakeListener: () => void;
+    let connected = false;
 
     const handshakeListener = (event: MessageEvent) => {
       const { data } = event;
@@ -40,6 +62,7 @@ export function ParentHandshake<M0 extends MethodsType>(
           requestId === thisSessionId &&
           result === HANDSHAKE_SUCCESS
         ) {
+          connected = true;
           removeHandshakeListener();
           resolve(new ConcreteConnection(localMethods, messenger, sessionId));
         }
@@ -48,8 +71,15 @@ export function ParentHandshake<M0 extends MethodsType>(
 
     removeHandshakeListener = messenger.addMessageListener(handshakeListener);
 
-    const message = createHandshakeMessage(thisSessionId);
-    messenger.postMessage(message);
+    runUntil(
+      () => {
+        const message = createHandshakeMessage(thisSessionId);
+        messenger.postMessage(message);
+      },
+      () => connected,
+      maxAttempts,
+      attemptsInterval
+    );
   });
 }
 
