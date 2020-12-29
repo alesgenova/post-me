@@ -25,11 +25,14 @@ export const HANDSHAKE_SUCCESS = '@post-me/handshake-success';
 const runUntil = (
   worker: () => void,
   condition: () => boolean,
-  attemptInterval = 50
+  maxAttempts: number,
+  attemptInterval: number
 ): void => {
+  let attempt = 0;
   const fn = () => {
-    if (!condition()) {
+    if (!condition() && (attempt < maxAttempts || maxAttempts < 1)) {
       worker();
+      attempt += 1;
       setTimeout(fn, attemptInterval);
     }
   };
@@ -38,7 +41,9 @@ const runUntil = (
 
 export function ParentHandshake<M0 extends MethodsType>(
   localMethods: M0,
-  messenger: Messenger
+  messenger: Messenger,
+  maxAttempts: number = 5,
+  attemptsInterval: number = 50
 ): Promise<Connection> {
   const thisSessionId = uniqueSessionId();
 
@@ -71,7 +76,9 @@ export function ParentHandshake<M0 extends MethodsType>(
         const message = createHandshakeMessage(thisSessionId);
         messenger.postMessage(message);
       },
-      () => connected
+      () => connected,
+      maxAttempts,
+      attemptsInterval
     );
   });
 }
