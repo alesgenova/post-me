@@ -1,4 +1,4 @@
-import { ChildHandshake, WindowMessenger } from './post-me.esm.js';
+import { ChildHandshake, WindowMessenger } from './ibridge.esm.js';
 
 let title = '';
 let color = '#ffffff';

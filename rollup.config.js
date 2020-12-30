@@ -4,7 +4,7 @@ export default {
   input: 'src/index.ts',
   output: [
     {
-      name: 'post-me',
+      name: 'ibridge',
       file: 'dist/index.umd.js',
       format: 'umd'
     },

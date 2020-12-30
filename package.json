@@ -1,5 +1,5 @@
 {
-  "name": "post-me",
+  "name": "ibridge",
   "version": "0.2.0",
   "description": "A library to facilitate communication between windows (iframe, worker, popup, ...)",
   "main": "dist/index.umd.js",
@@ -26,13 +26,12 @@
       "pre-commit": "yarn prettier:write-staged"
     }
   },
-  "author": "Alessandro Genova",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/alesgenova/post-me.git"
+    "url": "git+https://github.com/ibridge-js/ibridge.git"
   },
-  "homepage": "https://github.com/alesgenova/post-me",
+  "homepage": "https://github.com/ibridge-js/ibridge",
   "devDependencies": {
     "@types/jest": "^26.0.15",
     "@types/jsdom": "^16.2.5",
