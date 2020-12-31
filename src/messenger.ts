@@ -1,12 +1,14 @@
 export type MessageListener = (event: MessageEvent) => void;
 export type ListenerRemover = () => void;
 
-export interface Messenger {
+// TODO jsdocs
+export interface IMessenger {
   postMessage: (message: any) => void;
   addMessageListener: (listener: MessageListener) => ListenerRemover;
 }
 
-export class WindowMessenger implements Messenger {
+// TODO jsdocs
+export class WindowMessenger implements IMessenger {
   localWindow: Window = window;
   remoteWindow: Window;
   remoteOrigin: string;
@@ -60,7 +62,8 @@ export class WindowMessenger implements Messenger {
   }
 }
 
-export class WorkerMessenger implements Messenger {
+// TODO jsdocs
+export class WorkerMessenger implements IMessenger {
   worker: Worker | DedicatedWorkerGlobalScope;
 
   constructor(worker: Worker | DedicatedWorkerGlobalScope) {
