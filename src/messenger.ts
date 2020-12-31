@@ -1,87 +1,85 @@
-type MessageListener = (event: MessageEvent) => void;
-type ListenerRemover = () => void;
+export type MessageListener = (event: MessageEvent) => void;
+export type ListenerRemover = () => void;
 
 export interface Messenger {
   postMessage: (message: any) => void;
   addMessageListener: (listener: MessageListener) => ListenerRemover;
 }
 
-const acceptableMessageEvent = (
-  event: MessageEvent,
-  remoteWindow: Window,
-  acceptedOrigin: string
-) => {
-  const { source, origin } = event;
-
-  if (source !== remoteWindow) {
-    return false;
-  }
-
-  if (origin !== acceptedOrigin && acceptedOrigin !== '*') {
-    return false;
-  }
-
-  return true;
-};
-
 export class WindowMessenger implements Messenger {
-  postMessage: (message: any) => void;
-  addMessageListener: (listener: MessageListener) => ListenerRemover;
+  localWindow: Window = window;
+  remoteWindow: Window;
+  remoteOrigin: string;
 
   constructor({
-    localWindow,
+    localWindow = window,
     remoteWindow,
     remoteOrigin,
   }: {
-    localWindow?: Window;
+    localWindow: Window;
     remoteWindow: Window;
     remoteOrigin: string;
   }) {
-    localWindow = localWindow || window;
+    this.localWindow = localWindow;
+    this.remoteWindow = remoteWindow;
+    this.remoteOrigin = remoteOrigin;
+  }
 
-    this.postMessage = (message) => {
-      remoteWindow.postMessage(message, remoteOrigin);
+  postMessage(message: any): void {
+    this.remoteWindow.postMessage(message, this.remoteOrigin);
+  }
+
+  addMessageListener(listener: MessageListener): ListenerRemover {
+    const outerListener = (event: MessageEvent) => {
+      if (this.isValid(event)) {
+        listener(event);
+      }
     };
 
-    this.addMessageListener = (listener) => {
-      const outerListener = (event: MessageEvent) => {
-        if (acceptableMessageEvent(event, remoteWindow, remoteOrigin)) {
-          listener(event);
-        }
-      };
+    this.localWindow.addEventListener('message', outerListener);
 
-      localWindow!.addEventListener('message', outerListener);
-
-      const removeListener = () => {
-        localWindow!.removeEventListener('message', outerListener);
-      };
-
-      return removeListener;
+    const removeListener = () => {
+      this.localWindow.removeEventListener('message', outerListener);
     };
+
+    return removeListener;
+  }
+
+  isValid(event: MessageEvent): boolean {
+    const { source, origin } = event;
+
+    if (source !== this.remoteWindow) {
+      return false;
+    }
+
+    if (this.remoteOrigin !== '*' && origin !== this.remoteOrigin) {
+      return false;
+    }
+
+    return true;
   }
 }
 
 export class WorkerMessenger implements Messenger {
-  postMessage: (message: any) => void;
-  addMessageListener: (listener: MessageListener) => ListenerRemover;
+  worker: Worker | DedicatedWorkerGlobalScope;
 
-  constructor({ worker }: { worker: Worker | DedicatedWorkerGlobalScope }) {
-    this.postMessage = (message) => {
-      worker.postMessage(message);
+  constructor(worker: Worker | DedicatedWorkerGlobalScope) {
+    this.worker = worker;
+  }
+
+  postMessage(message: any): void {
+    this.worker.postMessage(message);
+  }
+
+  addMessageListener(listener: MessageListener): ListenerRemover {
+    // TODO remove any
+    this.worker.addEventListener('message', listener as any);
+
+    // TODO remove any
+    const removeListener = () => {
+      this.worker.removeEventListener('message', listener as any);
     };
 
-    this.addMessageListener = (listener) => {
-      const outerListener = (event: MessageEvent) => {
-        listener(event);
-      };
-
-      (worker as any).addEventListener('message', outerListener);
-
-      const removeListener = () => {
-        (worker as any).removeEventListener('message', outerListener);
-      };
-
-      return removeListener;
-    };
+    return removeListener;
   }
 }
