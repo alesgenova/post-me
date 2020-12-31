@@ -1,6 +1,12 @@
 import { ParentHandshake, ChildHandshake } from './handshake';
 import { Connection } from './connection';
-import { Messenger, WindowMessenger, WorkerMessenger } from './messenger';
+import {
+  Messenger,
+  WindowMessenger,
+  WorkerMessenger,
+  DebugMessenger,
+  debug,
+} from './messenger';
 import { RemoteHandle, LocalHandle } from './handle';
 
 export {
@@ -12,4 +18,6 @@ export {
   Messenger,
   WindowMessenger,
   WorkerMessenger,
+  DebugMessenger,
+  debug,
 };

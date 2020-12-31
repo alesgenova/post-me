@@ -85,3 +85,34 @@ export class WorkerMessenger implements Messenger {
     };
   }
 }
+
+export const debug = (namespace: string, log?: (...data: any[]) => void) => {
+  log = log || console.debug || console.log || (() => {});
+  return (...data: any[]) => {
+    log!(namespace, ...data);
+  };
+};
+
+export function DebugMessenger(
+  messenger: Messenger,
+  log?: (...data: any[]) => void
+): Messenger {
+  log = log || debug('post-me');
+
+  const debugListener: MessageListener = function (event) {
+    const { data } = event;
+    log!('⬅️ received message', data);
+  };
+
+  messenger.addMessageListener(debugListener);
+
+  return {
+    postMessage: function (message) {
+      log!('➡️ sending message', message);
+      messenger.postMessage(message);
+    },
+    addMessageListener: function (listener) {
+      return messenger.addMessageListener(listener);
+    },
+  };
+}
