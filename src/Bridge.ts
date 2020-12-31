@@ -7,13 +7,14 @@ import { IMessenger } from './messenger';
 import {
   CALL_REQUEST,
   ICallRequest,
+  ICallResponse,
   createCallRequest,
   createCallResponse,
   createCallResponseEventName,
 } from './msg/call';
 import { INativeEventData, createNativeEventData } from './msg/native';
 
-// TODO this needs to be an instance variable
+// TODO this also needs to be an instance variable
 const debug = debugFactory('ibridge:Bridge');
 
 export interface IConstructorArgs<TModel> {
@@ -70,13 +71,23 @@ export default class Bridge<TModel> extends Emittery {
     );
   }
 
+  // TODO review with alesgenova statically typing these methods
+  // (call and handleCall) doesn't make sense, becuase it only makes
+  // sense to validate `call` against the remote Model, so the lib consumer
+  // would require to somehgow share the type definitions between each side
+  // of the bridge and then pass it as a potentiall type argument toi this function
+  // whcih is something that post-me wasn't even doing.
+  //
+  // Typing handleCall might make more sense but it does not provide
+  // much usefulness as we would still need to provide runtime checks so
+  // that we can propvide useful runtime information to the user.
   async call(property: string, ...args: Array<any>): Promise<any> {
     const callId = uuid();
 
     this.emitToRemote(...createCallRequest({ callId, property, args }));
     const eventName = createCallResponseEventName(callId);
     debug('get await for response event %s', eventName);
-    const { value, error } = (await this.once(eventName)) as IGetResponse;
+    const { value, error } = (await this.once(eventName)) as ICallResponse<any>;
     if (error) {
       throw error;
     }
@@ -84,7 +95,6 @@ export default class Bridge<TModel> extends Emittery {
     return value;
   }
 
-  // TODO more static typing
   private async handleCall<TArgs extends Array<any>>(
     data: ICallRequest<TArgs>
   ): Promise<void> {
