@@ -1,4 +1,10 @@
-export type IdType = number;
+export type IdType = string;
+
+export type TModel = Required<
+  Record<string, Callable<any[], ValueOrPromise<any>>>
+>;
+
+export type TEvents = Record<string, any>;
 
 export type Callable<A extends Array<any>, R> = (...args: A) => R;
 

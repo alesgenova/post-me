@@ -1,4 +1,4 @@
-import { ChildHandshake, WindowMessenger } from './ibridge.esm.js';
+import { Child, WindowMessenger } from './ibridge.esm.js';
 
 let title = '';
 let color = '#ffffff';
@@ -27,10 +27,7 @@ const messenger = new WindowMessenger({
   remoteWindow: window.parent,
   remoteOrigin: '*',
 });
-ChildHandshake(methods, messenger).then((connection) => {
-  const localHandle = connection.localHandle();
-  const remoteHandle = connection.remoteHandle();
-
+new Child(messenger, methods).handshake().then((bridge) => {
   {
     const section = document.createElement('div');
     section.style.marginBottom = '0.5rem';
@@ -38,14 +35,14 @@ ChildHandshake(methods, messenger).then((connection) => {
     const button = document.createElement('button');
     button.innerHTML = 'Set Title';
     button.onclick = () => {
-      remoteHandle.call('setTitle', input.value);
+      bridge.call('setTitle', input.value);
     };
     section.appendChild(input);
     section.appendChild(button);
     container.appendChild(section);
 
     // Call a method on the parent to prepopulate the input
-    remoteHandle.call('getTitle').then((title) => (input.value = title));
+    bridge.call('getTitle').then((title) => (input.value = title));
   }
 
   {
@@ -55,14 +52,14 @@ ChildHandshake(methods, messenger).then((connection) => {
     const button = document.createElement('button');
     button.innerHTML = 'Set Color';
     button.onclick = () => {
-      remoteHandle.call('setColor', input.value);
+      bridge.call('setColor', input.value);
     };
     section.appendChild(input);
     section.appendChild(button);
     container.appendChild(section);
 
     // Call a method on the parent to prepopulate the input
-    remoteHandle.call('getColor').then((color) => (input.value = color));
+    bridge.call('getColor').then((color) => (input.value = color));
   }
 
   {
@@ -71,7 +68,7 @@ ChildHandshake(methods, messenger).then((connection) => {
     const button = document.createElement('button');
     button.innerHTML = 'Emit ping event';
     button.onclick = () => {
-      localHandle.emit('ping');
+      bridge.emit('ping');
     };
     section.appendChild(button);
     container.appendChild(section);
@@ -90,7 +87,7 @@ ChildHandshake(methods, messenger).then((connection) => {
     section.appendChild(pingParagraph);
     container.appendChild(section);
 
-    remoteHandle.addEventListener('ping', () => {
+    bridge.addEventListener('ping', () => {
       nPings += 1;
       pingSpan.innerHTML = nPings;
     });

@@ -1,6 +1,10 @@
-import debugFactory from 'debug';
-import Bridge, { IConstructorArgs } from './Bridge';
-import { HANDSHAKE_REQUEST, HANDSHAKE_RESPONSE } from './msg/handshake';
+import { v4 as uuid } from 'uuid';
+
+import debugFactory from './debug';
+import { Bridge, IBridge } from './Bridge';
+import { TModel } from './common';
+import { Dispatcher } from './dispatcher';
+import { IMessenger } from './messenger';
 
 // TODO make this an instance variable, include the sessionId
 const debug = debugFactory('ibridge:parent');
@@ -14,36 +18,42 @@ const debug = debugFactory('ibridge:parent');
 // TODO perhaps this can be renamed to something else?
 // THe main purpose of calling it Parent or Server is that
 // this is the thing that "initializes" the handshake process.
-export default class ParentAPI<TModel> extends Bridge<TModel> {
+export class Parent<M extends TModel> {
   /**
    * The maximum number of attempts to send a handshake request to the parent
    */
   static maxHandshakeRequests = 5;
+  messenger: IMessenger;
+  model: M;
 
-  constructor(args: IConstructorArgs<TModel>) {
-    super(args);
+  constructor(messenger: IMessenger, model: M) {
+    this.messenger = messenger;
+    this.model = model;
   }
 
-  async handshake(): Promise<ParentAPI<TModel>> {
+  async handshake(): Promise<IBridge> {
     debug('starting handshake');
     let attempt = 0;
+    const dispatcher = new Dispatcher(this.messenger);
+    const sessionId = uuid();
 
     const tryHandshake = async () => {
-      while (attempt < ParentAPI.maxHandshakeRequests) {
+      while (attempt < Parent.maxHandshakeRequests) {
         attempt++;
         debug(`handshake attempt %s %s`, attempt, this.messenger);
-        this.emitToRemote(HANDSHAKE_REQUEST);
+        const responseEvent = dispatcher.initiateHandshake(sessionId);
 
         try {
-          await Promise.race([this.once(HANDSHAKE_RESPONSE), timeout(500)]);
+          await Promise.race([dispatcher.once(responseEvent), timeout(500)]);
         } catch (err) {
           // this should only happen if the timeout is reached, try again
+          dispatcher.clearListeners(responseEvent);
           continue;
         }
 
         debug('Received handshake reply from Child');
         // Clean up any outstanding handhsake reply "once" listeners
-        this.clearListeners(HANDSHAKE_RESPONSE);
+        dispatcher.clearListeners(responseEvent);
         return;
       }
 
@@ -52,7 +62,7 @@ export default class ParentAPI<TModel> extends Bridge<TModel> {
 
     await tryHandshake();
     debug('handshake ok');
-    return this;
+    return new Bridge(dispatcher, this.model);
   }
 }
 

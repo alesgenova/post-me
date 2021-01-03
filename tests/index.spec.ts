@@ -1,5 +1,7 @@
-import { ParentHandshake, ChildHandshake } from '../src/handshake';
-import { Connection } from '../src/connection';
+import { Parent } from '../src/Parent';
+import { Child } from '../src/Child';
+import { IBridge } from '../src/Bridge';
+
 import { WindowMessenger } from '../src/messenger';
 
 import { JSDOM } from 'jsdom';
@@ -85,8 +87,8 @@ function makeHandshake(
   _windows?: [Window, Window]
 ): Promise<
   [
-    Connection<ParentEvents, ChildMethods, ChildEvents>,
-    Connection<ChildEvents, ParentMethods, ParentEvents>
+    IBridge<ParentEvents, ChildMethods, ChildEvents>,
+    IBridge<ChildEvents, ParentMethods, ParentEvents>
   ]
 > {
   let windows =
@@ -104,10 +106,10 @@ function makeHandshake(
     remoteWindow: parentWindow,
     remoteOrigin: parentWindow.origin,
   });
-  const handshakes = [
-    ParentHandshake(parentMethods, parentMessenger),
-    ChildHandshake(childMethods, childMessenger),
-  ] as const;
+
+  const parent = new Parent(parentMessenger, parentMethods);
+  const child = new Child(childMessenger, childMethods);
+  const handshakes = [parent.handshake(), child.handshake()] as const;
 
   return Promise.all(handshakes);
 }
@@ -118,8 +120,7 @@ function sleep(duration: number): Promise<void> {
 
 test('handshake', () => {
   return new Promise<void>((resolve) => {
-    makeHandshake().then(([parentConnection, childConnection]) => {
-      expect(parentConnection.sessionId()).toEqual(childConnection.sessionId());
+    makeHandshake().then(([_parentBridge, _childBridge]) => {
       resolve();
     });
   });
@@ -127,23 +128,21 @@ test('handshake', () => {
 
 test('call', () => {
   return new Promise<void>((resolve, reject) => {
-    makeHandshake().then(([parentConnection, childConnection]) => {
+    makeHandshake().then(([parentBridge, childBridge]) => {
       const tasks: Promise<any>[] = [];
 
       // Code in the parent app
       {
-        const remoteHandle = parentConnection.remoteHandle();
-
         const args0 = [2] as const;
 
-        const task0 = remoteHandle.call('foo', ...args0).then(async (value) => {
+        const task0 = parentBridge.call('foo', ...args0).then(async (value) => {
           expect(value).toEqual(childMethods.foo(...args0));
           return value;
         });
         tasks.push(task0);
 
         const args1 = [] as const;
-        const task1 = remoteHandle.call('bar', ...args1).then(async (value) => {
+        const task1 = parentBridge.call('bar', ...args1).then(async (value) => {
           expect(value).toEqual(await childMethods.bar(...args1));
           return value;
         });
@@ -152,18 +151,16 @@ test('call', () => {
 
       // Code in the child app
       {
-        const remoteHandle = childConnection.remoteHandle();
-
         const args0 = [2, 'four'] as const;
 
-        const task0 = remoteHandle.call('baz', ...args0).then(async (value) => {
+        const task0 = childBridge.call('baz', ...args0).then(async (value) => {
           expect(value).toEqual(parentMethods.baz(...args0));
           return value;
         });
         tasks.push(task0);
 
         const args1 = [] as const;
-        const task1 = remoteHandle.call('wut', ...args1).then(async (value) => {
+        const task1 = childBridge.call('wut', ...args1).then(async (value) => {
           expect(value).toEqual(await parentMethods.wut(...args1));
           return value;
         });
@@ -177,7 +174,7 @@ test('call', () => {
 
 test('emit', () => {
   return new Promise<void>((resolve, reject) => {
-    makeHandshake().then(([parentConnection, childConnection]) => {
+    makeHandshake().then(([parentBridge, childBridge]) => {
       const tasks: Promise<any>[] = [];
 
       const maxRunTime = 500;
@@ -192,11 +189,9 @@ test('emit', () => {
 
       // Code in the parent app
       {
-        const remoteHandle = parentConnection.remoteHandle();
-
         const task0 = new Promise((resolve) => {
           let count = 0;
-          remoteHandle.addEventListener('tapped', (data) => {
+          parentBridge.addEventListener('tapped', (data) => {
             expect(data).toEqual(messageFromChild);
             count += 1;
           });
@@ -212,11 +207,11 @@ test('emit', () => {
           let count = 0;
           // Remove listener
           const listener = (data: typeof messageFromChild) => {
-            remoteHandle.removeEventListener('tapped', listener);
+            parentBridge.removeEventListener('tapped', listener);
             expect(data).toEqual(messageFromChild);
             count += 1;
           };
-          remoteHandle.addEventListener('tapped', listener);
+          parentBridge.addEventListener('tapped', listener);
 
           setTimeout(() => {
             expect(count).toEqual(1);
@@ -225,21 +220,18 @@ test('emit', () => {
         });
         tasks.push(task1);
 
-        const localHanlde = parentConnection.localHandle();
         setTimeout(() => {
           for (let i = 0; i < nEmits; ++i) {
-            localHanlde.emit('opened', messageFromParent);
+            parentBridge.emit('opened', messageFromParent);
           }
         }, 50);
       }
 
       // Code in the child app
       {
-        const remoteHandle = childConnection.remoteHandle();
-
         const task0 = new Promise((resolve) => {
           let count = 0;
-          remoteHandle.addEventListener('opened', (data) => {
+          childBridge.addEventListener('opened', (data) => {
             expect(data).toEqual(messageFromParent);
             count += 1;
           });
@@ -255,11 +247,11 @@ test('emit', () => {
           let count = 0;
           // Remove listener
           const listener = (data: typeof messageFromParent) => {
-            remoteHandle.removeEventListener('opened', listener);
+            childBridge.removeEventListener('opened', listener);
             expect(data).toEqual(messageFromParent);
             count += 1;
           };
-          remoteHandle.addEventListener('opened', listener);
+          childBridge.addEventListener('opened', listener);
 
           setTimeout(() => {
             expect(count).toEqual(1);
@@ -268,10 +260,9 @@ test('emit', () => {
         });
         tasks.push(task1);
 
-        const localHanlde = childConnection.localHandle();
         setTimeout(() => {
           for (let i = 0; i < nEmits; ++i) {
-            localHanlde.emit('tapped', messageFromChild);
+            childBridge.emit('tapped', messageFromChild);
           }
         }, 50);
       }
@@ -283,17 +274,15 @@ test('emit', () => {
 
 test('error', () => {
   return new Promise<void>((resolve, reject) => {
-    makeHandshake().then(([parentConnection, childConnection]) => {
+    makeHandshake().then(([parentBridge, childBridge]) => {
       const tasks: Promise<any>[] = [];
 
       // Code in the parent app
       {
-        const remoteHandle = parentConnection.remoteHandle();
-
         const args0 = [] as const;
 
         // The method actually throws an error
-        const task0 = remoteHandle
+        const task0 = parentBridge
           .call('throws', ...args0)
           .then((_value) => {
             throw new Error("It shouldn't have resolved");
@@ -305,15 +294,13 @@ test('error', () => {
         tasks.push(task0);
 
         // The method doesn't exist (typescript would actually catch the mistake during dev)
-        const task1 = remoteHandle
+        const task1 = childBridge
           .call('whatever' as any, ...[])
           .then((_value) => {
             throw new Error("It shouldn't have resolved");
           })
           .catch((e: Error) => {
-            expect(e.message).toEqual(
-              `The method "whatever" has not been implemented.`
-            );
+            expect(e.message).toEqual(`model function "whatever" not found`);
             return e;
           });
         tasks.push(task1);
@@ -321,12 +308,10 @@ test('error', () => {
 
       // Code in the child app
       {
-        const remoteHandle = childConnection.remoteHandle();
-
         const args0 = [] as const;
 
         // The method actually throws an error
-        const task0 = remoteHandle
+        const task0 = childBridge
           .call('throws', ...args0)
           .then((_value) => {
             throw new Error("It shouldn't have resolved");
@@ -338,15 +323,13 @@ test('error', () => {
         tasks.push(task0);
 
         // The method doesn't exist (typescript would actually catch the mistake during dev)
-        const task1 = remoteHandle
+        const task1 = childBridge
           .call('anything' as any, ...[])
           .then((_value) => {
             throw new Error("It shouldn't have resolved");
           })
           .catch((e: Error) => {
-            expect(e.message).toEqual(
-              `The method "anything" has not been implemented.`
-            );
+            expect(e.message).toEqual(`model function "anything" not found`);
             return e;
           });
         tasks.push(task1);
@@ -377,14 +360,14 @@ test('handshake-fail', () => {
       remoteOrigin: wrongParentOrigin,
     });
 
-    const parentHandshake = ParentHandshake({}, parentMessenger);
-    const childHandshake = ChildHandshake({}, childMessenger);
+    const parentHandshake = new Parent(parentMessenger, {}).handshake();
+    const childHandshake = new Child(childMessenger, {}).handshake();
 
-    parentHandshake.then((_connection) => {
+    parentHandshake.then((_bridge) => {
       reject(new Error('The handshake should be failing. - parent'));
     });
 
-    childHandshake.then((_connection) => {
+    childHandshake.then((_bridge) => {
       reject(new Error('The handshake should be failing. - child'));
     });
 
@@ -395,187 +378,18 @@ test('handshake-fail', () => {
   });
 });
 
-xtest('multi-connection', () => {
-  return new Promise<void>((resolve, reject) => {
-    // One parent connected to two children
-
-    const parentOrigin = 'https://parent.example.com';
-    const child0Origin = 'https://child0.example.com';
-    const child1Origin = 'https://child0.example.com';
-    // Because of JSDOM limitations, the two child windows need to have the same origin
-    const [parentWindow, child0Window] = makeWindows(
-      parentOrigin,
-      child0Origin
-    );
-
-    const child1Window: Window = new JSDOM(``, { url: child1Origin })
-      .window as any;
-    child1Window.postMessage = bindPostMessageToSource(
-      child1Window,
-      parentWindow
-    );
-
-    const maxRunTime = 500;
-    const nEmits = 4;
-
-    makeHandshake([parentWindow, child0Window]).then(
-      ([parent0Connection, child0Connection]) => {
-        parentWindow.postMessage = bindPostMessageToSource(
-          parentWindow,
-          child1Window
-        );
-        makeHandshake([parentWindow, child1Window]).then(
-          ([parent1Connection, child1Connection]) => {
-            const tasks: Promise<any>[] = [];
-            {
-              // Parent Code
-              {
-                // Child 0 connection
-                const localHandle = parent0Connection.localHandle();
-                const remoteHandle = parent0Connection.remoteHandle();
-
-                const task0 = remoteHandle
-                  .call('ping', 'child0')
-                  .then((res) => {
-                    expect(res).toEqual('child0');
-                    return res;
-                  });
-                tasks.push(task0);
-
-                const task1 = new Promise((resolve) => {
-                  let count = 0;
-                  remoteHandle.addEventListener('clicked', (data) => {
-                    expect(data).toEqual(0);
-                    count += 1;
-                  });
-
-                  setTimeout(() => {
-                    expect(count).toEqual(nEmits);
-                    resolve(count);
-                  }, maxRunTime);
-                });
-                tasks.push(task1);
-
-                setTimeout(() => {
-                  for (let i = 0; i < nEmits; ++i) {
-                    localHandle.emit('opened', {
-                      type: 'foo',
-                      message: 'child0',
-                    });
-                  }
-                }, 50);
-              }
-              {
-                // Child 1 connection
-                const localHandle = parent1Connection.localHandle();
-                const remoteHandle = parent1Connection.remoteHandle();
-
-                const task0 = remoteHandle
-                  .call('ping', 'child0')
-                  .then((res) => {
-                    expect(res).toEqual('child0');
-                    return res;
-                  });
-                tasks.push(task0);
-
-                const task1 = new Promise((resolve) => {
-                  let count = 0;
-                  remoteHandle.addEventListener('clicked', (data) => {
-                    expect(data).toEqual(1);
-                    count += 1;
-                  });
-
-                  setTimeout(() => {
-                    expect(count).toEqual(nEmits);
-                    resolve(count);
-                  }, maxRunTime);
-                });
-                tasks.push(task1);
-
-                setTimeout(() => {
-                  for (let i = 0; i < nEmits; ++i) {
-                    localHandle.emit('opened', {
-                      type: 'foo',
-                      message: 'child1',
-                    });
-                  }
-                }, 50);
-              }
-            }
-
-            {
-              // Child0 Code
-              const localHandle = child0Connection.localHandle();
-              const remoteHandle = child0Connection.remoteHandle();
-
-              const task0 = new Promise((resolve) => {
-                let count = 0;
-                remoteHandle.addEventListener('opened', (data) => {
-                  expect(data.message).toEqual('child0');
-                  count += 1;
-                });
-
-                setTimeout(() => {
-                  expect(count).toEqual(nEmits);
-                  resolve(count);
-                }, maxRunTime);
-              });
-              tasks.push(task0);
-
-              setTimeout(() => {
-                for (let i = 0; i < nEmits; ++i) {
-                  localHandle.emit('clicked', 0);
-                }
-              }, 50);
-            }
-
-            {
-              // Child1 Code
-              const localHandle = child1Connection.localHandle();
-              const remoteHandle = child1Connection.remoteHandle();
-
-              const task0 = new Promise((resolve) => {
-                let count = 0;
-                remoteHandle.addEventListener('opened', (data) => {
-                  expect(data.message).toEqual('child1');
-                  count += 1;
-                });
-
-                setTimeout(() => {
-                  expect(count).toEqual(nEmits);
-                  resolve(count);
-                }, maxRunTime);
-              });
-              tasks.push(task0);
-
-              setTimeout(() => {
-                for (let i = 0; i < nEmits; ++i) {
-                  localHandle.emit('clicked', 1);
-                }
-              }, 50);
-            }
-
-            Promise.all(tasks).then(() => resolve());
-          }
-        );
-      }
-    );
-  });
-});
-
 test('parent handshake before child', async () => {
   const parentOrigin = 'https://parent.example.com';
   const childOrigin = 'https://child.example.com';
   const [parentWindow, childWindow] = makeWindows(parentOrigin, childOrigin);
-  let parentConnection: Promise<Connection>,
-    childConnection: Promise<Connection>;
+  let parentBridge: Promise<IBridge>, childBridge: Promise<IBridge>;
 
   const parentMessenger = new WindowMessenger({
     localWindow: parentWindow,
     remoteWindow: childWindow,
     remoteOrigin: childWindow.origin,
   });
-  parentConnection = ParentHandshake(parentMethods, parentMessenger);
+  parentBridge = new Parent(parentMessenger, {}).handshake();
 
   await sleep(100);
 
@@ -584,23 +398,22 @@ test('parent handshake before child', async () => {
     remoteWindow: parentWindow,
     remoteOrigin: parentWindow.origin,
   });
-  childConnection = ChildHandshake(childMethods, childMessenger);
-  await Promise.all([parentConnection, childConnection]);
+  childBridge = new Child(childMessenger, {}).handshake();
+  await Promise.all([parentBridge, childBridge]);
 });
 
 test('child handshake before parent', async () => {
   const parentOrigin = 'https://parent.example.com';
   const childOrigin = 'https://child.example.com';
   const [parentWindow, childWindow] = makeWindows(parentOrigin, childOrigin);
-  let parentConnection: Promise<Connection>,
-    childConnection: Promise<Connection>;
+  let parentBridge: Promise<IBridge>, childBridge: Promise<IBridge>;
 
   const childMessenger = new WindowMessenger({
     localWindow: childWindow,
     remoteWindow: parentWindow,
     remoteOrigin: parentWindow.origin,
   });
-  childConnection = ChildHandshake(childMethods, childMessenger);
+  childBridge = new Child(childMessenger, {}).handshake();
 
   await sleep(100);
 
@@ -609,7 +422,175 @@ test('child handshake before parent', async () => {
     remoteWindow: childWindow,
     remoteOrigin: childWindow.origin,
   });
-  parentConnection = ParentHandshake(parentMethods, parentMessenger);
+  parentBridge = new Parent(parentMessenger, {}).handshake();
 
-  await Promise.all([childConnection, parentConnection]);
+  await Promise.all([parentBridge, childBridge]);
 });
+
+// xtest('multi-connection', () => {
+//     return new Promise<void>((resolve, reject) => {
+//         // One parent connected to two children
+
+//         const parentOrigin = 'https://parent.example.com';
+//         const child0Origin = 'https://child0.example.com';
+//         const child1Origin = 'https://child0.example.com';
+//         // Because of JSDOM limitations, the two child windows need to have the same origin
+//         const [parentWindow, child0Window] = makeWindows(
+//             parentOrigin,
+//             child0Origin
+//         );
+
+//         const child1Window: Window = new JSDOM(``, { url: child1Origin })
+//             .window as any;
+//         child1Window.postMessage = bindPostMessageToSource(
+//             child1Window,
+//             parentWindow
+//         );
+
+//         const maxRunTime = 500;
+//         const nEmits = 4;
+
+//         makeHandshake([parentWindow, child0Window]).then(
+//             ([parent0Connection, child0Connection]) => {
+//                 parentWindow.postMessage = bindPostMessageToSource(
+//                     parentWindow,
+//                     child1Window
+//                 );
+//                 makeHandshake([parentWindow, child1Window]).then(
+//                     ([parent1Connection, child1Connection]) => {
+//                         const tasks: Promise<any>[] = [];
+//                         {
+//                             // Parent Code
+//                             {
+//                                 // Child 0 connection
+//                                 const localHandle = parent0Connection.localHandle();
+//                                 const remoteHandle = parent0Connection.remoteHandle();
+
+//                                 const task0 = remoteHandle
+//                                     .call('ping', 'child0')
+//                                     .then((res) => {
+//                                         expect(res).toEqual('child0');
+//                                         return res;
+//                                     });
+//                                 tasks.push(task0);
+
+//                                 const task1 = new Promise((resolve) => {
+//                                     let count = 0;
+//                                     remoteHandle.addEventListener('clicked', (data) => {
+//                                         expect(data).toEqual(0);
+//                                         count += 1;
+//                                     });
+
+//                                     setTimeout(() => {
+//                                         expect(count).toEqual(nEmits);
+//                                         resolve(count);
+//                                     }, maxRunTime);
+//                                 });
+//                                 tasks.push(task1);
+
+//                                 setTimeout(() => {
+//                                     for (let i = 0; i < nEmits; ++i) {
+//                                         localHandle.emit('opened', {
+//                                             type: 'foo',
+//                                             message: 'child0',
+//                                         });
+//                                     }
+//                                 }, 50);
+//                             }
+//                             {
+//                                 // Child 1 connection
+//                                 const localHandle = parent1Connection.localHandle();
+//                                 const remoteHandle = parent1Connection.remoteHandle();
+
+//                                 const task0 = remoteHandle
+//                                     .call('ping', 'child0')
+//                                     .then((res) => {
+//                                         expect(res).toEqual('child0');
+//                                         return res;
+//                                     });
+//                                 tasks.push(task0);
+
+//                                 const task1 = new Promise((resolve) => {
+//                                     let count = 0;
+//                                     remoteHandle.addEventListener('clicked', (data) => {
+//                                         expect(data).toEqual(1);
+//                                         count += 1;
+//                                     });
+
+//                                     setTimeout(() => {
+//                                         expect(count).toEqual(nEmits);
+//                                         resolve(count);
+//                                     }, maxRunTime);
+//                                 });
+//                                 tasks.push(task1);
+
+//                                 setTimeout(() => {
+//                                     for (let i = 0; i < nEmits; ++i) {
+//                                         localHandle.emit('opened', {
+//                                             type: 'foo',
+//                                             message: 'child1',
+//                                         });
+//                                     }
+//                                 }, 50);
+//                             }
+//                         }
+
+//                         {
+//                             // Child0 Code
+//                             const localHandle = child0Connection.localHandle();
+//                             const remoteHandle = child0Connection.remoteHandle();
+
+//                             const task0 = new Promise((resolve) => {
+//                                 let count = 0;
+//                                 remoteHandle.addEventListener('opened', (data) => {
+//                                     expect(data.message).toEqual('child0');
+//                                     count += 1;
+//                                 });
+
+//                                 setTimeout(() => {
+//                                     expect(count).toEqual(nEmits);
+//                                     resolve(count);
+//                                 }, maxRunTime);
+//                             });
+//                             tasks.push(task0);
+
+//                             setTimeout(() => {
+//                                 for (let i = 0; i < nEmits; ++i) {
+//                                     localHandle.emit('clicked', 0);
+//                                 }
+//                             }, 50);
+//                         }
+
+//                         {
+//                             // Child1 Code
+//                             const localHandle = child1Connection.localHandle();
+//                             const remoteHandle = child1Connection.remoteHandle();
+
+//                             const task0 = new Promise((resolve) => {
+//                                 let count = 0;
+//                                 remoteHandle.addEventListener('opened', (data) => {
+//                                     expect(data.message).toEqual('child1');
+//                                     count += 1;
+//                                 });
+
+//                                 setTimeout(() => {
+//                                     expect(count).toEqual(nEmits);
+//                                     resolve(count);
+//                                 }, maxRunTime);
+//                             });
+//                             tasks.push(task0);
+
+//                             setTimeout(() => {
+//                                 for (let i = 0; i < nEmits; ++i) {
+//                                     localHandle.emit('clicked', 1);
+//                                 }
+//                             }, 50);
+//                         }
+
+//                         Promise.all(tasks).then(() => resolve());
+//                     }
+//                 );
+//             }
+//         );
+//     });
+// });

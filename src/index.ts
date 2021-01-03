@@ -1,15 +1,14 @@
-import { ParentHandshake, ChildHandshake } from './handshake';
-import { Connection } from './connection';
-import { Messenger, WindowMessenger, WorkerMessenger } from './messenger';
-import { RemoteHandle, LocalHandle } from './handle';
+import { IMessenger, WindowMessenger, WorkerMessenger } from './messenger';
+import { Parent } from './Parent';
+import { Child } from './Child';
+import { IBridge, Bridge } from './Bridge';
 
 export {
-  ParentHandshake,
-  ChildHandshake,
-  Connection,
-  RemoteHandle,
-  LocalHandle,
-  Messenger,
+  Parent,
+  Child,
+  Bridge,
+  IMessenger,
+  IBridge,
   WindowMessenger,
   WorkerMessenger,
 };

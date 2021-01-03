@@ -1,8 +1,4 @@
-import {
-  ParentHandshake,
-  WindowMessenger,
-  WorkerMessenger,
-} from './ibridge.esm.js';
+import { Parent, WindowMessenger, WorkerMessenger } from './ibridge.esm.js';
 
 let title = 'Parent';
 let color = '#eeeeee';
@@ -67,17 +63,14 @@ const makeHandshake = (i, childWindow) => {
     remoteWindow: childWindow,
     remoteOrigin: '*',
   });
-  return ParentHandshake(methods, messenger);
+  return new Parent(messenger, methods).handshake();
 };
 
-const createChildControls = (i, controlsContainer, connection) => {
-  const localHandle = connection.localHandle();
-  const remoteHandle = connection.remoteHandle();
-
+const createChildControls = (i, controlsContainer, bridge) => {
   const defaultTitle = defaultTitles[i];
   const defaultColor = defaultColors[i];
-  remoteHandle.call('setTitle', defaultTitle);
-  remoteHandle.call('setColor', defaultColor);
+  bridge.call('setTitle', defaultTitle);
+  bridge.call('setColor', defaultColor);
 
   const title = document.createElement('h4');
   title.innerHTML = `Child ${i}`;
@@ -92,7 +85,7 @@ const createChildControls = (i, controlsContainer, connection) => {
     const button = document.createElement('button');
     button.innerHTML = 'Set Title';
     button.onclick = () => {
-      remoteHandle.call('setTitle', input.value);
+      bridge.call('setTitle', input.value);
     };
     section.appendChild(input);
     section.appendChild(button);
@@ -108,7 +101,7 @@ const createChildControls = (i, controlsContainer, connection) => {
     const button = document.createElement('button');
     button.innerHTML = 'Set Color';
     button.onclick = () => {
-      remoteHandle.call('setColor', input.value);
+      bridge.call('setColor', input.value);
     };
     section.appendChild(input);
     section.appendChild(button);
@@ -121,7 +114,7 @@ const createChildControls = (i, controlsContainer, connection) => {
     const button = document.createElement('button');
     button.innerHTML = 'Emit ping event';
     button.onclick = () => {
-      localHandle.emit('ping');
+      bridge.emit('ping');
     };
     section.appendChild(button);
     controlsContainer.appendChild(section);
@@ -140,7 +133,7 @@ const createChildControls = (i, controlsContainer, connection) => {
     section.appendChild(pingParagraph);
     controlsContainer.appendChild(section);
 
-    remoteHandle.addEventListener('ping', () => {
+    bridge.addEventListener('ping', () => {
       nPings += 1;
       pingSpan.innerHTML = nPings;
     });
@@ -151,8 +144,8 @@ const initChild = async (i) => {
   const controlsContainer = document.createElement('div');
   childrenControlsContainer.appendChild(controlsContainer);
   const childWindow = await createChildWindow(i);
-  const connection = await makeHandshake(i, childWindow);
-  createChildControls(i, controlsContainer, connection);
+  const bridge = await makeHandshake(i, childWindow);
+  createChildControls(i, controlsContainer, bridge);
 };
 
 children.forEach((i) => initChild(i));
@@ -161,11 +154,9 @@ children.forEach((i) => initChild(i));
 {
   const worker = new Worker('./worker.js');
 
-  const messenger = new WorkerMessenger({ worker });
+  const messenger = new WorkerMessenger(worker);
 
-  ParentHandshake({}, messenger).then((connection) => {
-    const remoteHandle = connection.remoteHandle();
-
+  new Parent(messenger, {}).handshake().then((bridge) => {
     const title = document.createElement('h4');
     title.innerHTML = `Worker`;
     workerControlsContainer.appendChild(title);
@@ -192,7 +183,7 @@ children.forEach((i) => initChild(i));
       const button = document.createElement('button');
       button.innerHTML = 'Calculate';
       button.onclick = () => {
-        remoteHandle
+        bridge
           .call('sum', parseFloat(inputA.value), parseFloat(inputB.value))
           .then((result) => {
             inputR.value = result;
@@ -235,7 +226,7 @@ children.forEach((i) => initChild(i));
       const button = document.createElement('button');
       button.innerHTML = 'Calculate';
       button.onclick = () => {
-        remoteHandle
+        bridge
           .call('mul', parseFloat(inputA.value), parseFloat(inputB.value))
           .then((result) => {
             inputR.value = result;
