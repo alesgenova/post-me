@@ -260,7 +260,7 @@ ParentHandshake(methods, messenger).then((connection) => {
 
 ### Worker code
 ```typescript
-importScripts('./post-me.umd.js');
+importScripts('./post-me.js');
 const PostMe = self['post-me'];
 
 const methods = {

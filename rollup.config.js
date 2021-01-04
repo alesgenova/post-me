@@ -16,7 +16,7 @@ export default [
     output: [
       {
         name: 'post-me',
-        file: 'dist/index.umd.js',
+        file: 'dist/index.js',
         format: 'umd'
       }
     ],
