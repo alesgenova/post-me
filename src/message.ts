@@ -1,11 +1,11 @@
 import { IdType } from './common';
 
 export enum MessageType {
-  Handshake = '@ibridge/handshake',
-  Call = '@ibridge/call',
-  Response = '@ibridge/response',
-  Error = '@ibridge/error',
-  Event = '@ibridge/event',
+  Handshake = '@post-me/handshake',
+  Call = '@post-me/call',
+  Response = '@post-me/response',
+  Error = '@post-me/error',
+  Event = '@post-me/event',
 }
 
 export interface Message<T extends MessageType> {
