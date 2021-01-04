@@ -3,16 +3,16 @@
 [![codecov](https://codecov.io/gh/alesgenova/post-me/branch/main/graph/badge.svg)](https://codecov.io/gh/alesgenova/post-me)
 # post-me
 
-`post-me` is a library that facilitates two way communication between windows, for example between a parent and an iframe, a worker, a tab, or a popup.
+`post-me` is a library that facilitates two way communication with web workers and other windows (iframes, popups).
 
-Under the hood `post-me` uses the low level [`postMessage`](https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage) API.
-
-`post-me` was inspired by [`postmate`](https://github.com/dollarshaveclub/postmate), and it provides several major improvements:
+The API was inspired by [`postmate`](https://github.com/dollarshaveclub/postmate), and it provides several major improvements:
+  - A simple `Promise` based API.
+  - No dependencies, tiny footprint (2kb gzipped)
   - Native `typescript` support to allow strong typings of method calls and event payloads during development.
   - Method calls can have both arguments and a return value.
   - Both parent and child can expose methods and events (instead of child only).
   - Exceptions that occur in a method call can be caught by the caller.
-  - Communicate between any two windows, not just iframes (e.g. workers, popups, and tabs).
+  - Already supports communication with other windows and web workers.
   - Create multiple concurrent connections.
 
 ## Demo
@@ -20,6 +20,7 @@ In this [live demo](https://alesgenova.github.io/post-me/) a parent window achie
 
 ## Usage
 To establish a connection between two windows follow the steps below:
+  - Create a `Messenger`, an object implementing the low level communication (`WindowMessenger` and `WorkerMessenger` already provided).
   - Initiate a handshake between the parent window and the child window by calling the `ParentHandshake()` and `ChildHandshake()` methods respectively.
   - The `methods` parameter contain the methods that each window will expose to the other.
   - The handshake returns a `Promise<Connection>` to the two windows.
@@ -260,7 +261,7 @@ ParentHandshake(methods, messenger).then((connection) => {
 
 ### Worker code
 ```typescript
-importScripts('./post-me.umd.js');
+importScripts('./post-me.js');
 const PostMe = self['post-me'];
 
 const methods = {

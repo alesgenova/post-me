@@ -2,14 +2,14 @@
   "name": "post-me",
   "version": "0.2.0",
   "description": "A library to facilitate communication between windows (iframe, worker, popup, ...)",
-  "main": "dist/index.umd.js",
+  "main": "dist/index.js",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "rollup -c",
+    "build": "rollup -c && uglifyjs dist/index.js -o dist/index.min.js && tsc --emitDeclarationOnly",
     "build:demo": "npm run build && node scripts/build-demo.js www",
     "demo": "npm run build:demo && npx serve www",
     "deploy:demo": "npm run build:demo && gh-pages -d www",
@@ -34,6 +34,7 @@
   },
   "homepage": "https://github.com/alesgenova/post-me",
   "devDependencies": {
+    "@rollup/plugin-typescript": "^8.1.0",
     "@types/jest": "^26.0.15",
     "@types/jsdom": "^16.2.5",
     "gh-pages": "^3.1.0",
@@ -42,11 +43,11 @@
     "jsdom": "^16.4.0",
     "prettier": "^2.2.1",
     "pretty-quick": "^3.1.0",
-    "rollup": "^2.33.3",
-    "rollup-plugin-typescript2": "^0.29.0",
+    "rollup": "^2.35.1",
     "ts-jest": "^26.4.4",
     "tslib": "^2.0.3",
-    "typescript": "^4.1.2"
+    "typescript": "^4.1.3",
+    "uglify-js": "^3.12.4"
   },
   "publishConfig": {
     "access": "public"
