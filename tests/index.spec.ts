@@ -1,6 +1,11 @@
 import { ParentHandshake, ChildHandshake } from '../src/handshake';
 import { Connection } from '../src/connection';
-import { WindowMessenger } from '../src/messenger';
+import {
+  Messenger,
+  WindowMessenger,
+  DebugMessenger,
+  debug,
+} from '../src/messenger';
 
 import { JSDOM } from 'jsdom';
 
@@ -612,4 +617,39 @@ test('child handshake before parent', async () => {
   parentConnection = ParentHandshake(parentMethods, parentMessenger);
 
   await Promise.all([childConnection, parentConnection]);
+});
+
+test('debug', () => {
+  const makeBouceBackMessenger = function (): Messenger {
+    const listeners = new Set<(event: MessageEvent) => void>();
+    return {
+      postMessage: function (message: any) {
+        listeners.forEach((listener) => {
+          listener({ data: message } as any);
+        });
+      },
+      addMessageListener: function (listener) {
+        listeners.add(listener);
+        return function () {
+          listeners.delete(listener);
+        };
+      },
+    };
+  };
+
+  const jestLog = jest.fn();
+  const namespace = 'post-me';
+  const log = debug(namespace, jestLog);
+
+  let messenger = makeBouceBackMessenger();
+  messenger = DebugMessenger(messenger, log);
+
+  messenger.postMessage(1);
+  messenger.postMessage(2);
+
+  expect(jestLog).toHaveBeenCalledWith(namespace, '➡️ sending message', 1);
+  expect(jestLog).toHaveBeenCalledWith(namespace, '⬅️ received message', 1);
+  expect(jestLog).toHaveBeenCalledWith(namespace, '➡️ sending message', 2);
+  expect(jestLog).toHaveBeenCalledWith(namespace, '⬅️ received message', 2);
+  expect(jestLog).toHaveBeenCalledTimes(4);
 });
