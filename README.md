@@ -1,14 +1,13 @@
-[![workflow status](https://github.com/ibridge-js/ibridge/workflows/main/badge.svg?branch=main)](https://github.com/ibridge-js/ibridge/actions?query=workflow%3Amain+branch%3Amain)
-[![npm package](https://img.shields.io/npm/v/ibridge.svg)](https://www.npmjs.com/package/ibridge)
-[![codecov](https://codecov.io/gh/ibridge-js/ibridge/branch/main/graph/badge.svg)](https://codecov.io/gh/ibridge-js/ibridge)
+[![workflow status](https://github.com/alesgenova/post-me/workflows/main/badge.svg?branch=main)](https://github.com/alesgenova/post-me/actions?query=workflow%3Amain+branch%3Amain)
+[![npm package](https://img.shields.io/npm/v/post-me.svg)](https://www.npmjs.com/package/post-me)
+[![codecov](https://codecov.io/gh/alesgenova/post-me/branch/main/graph/badge.svg)](https://codecov.io/gh/alesgenova/post-me)
+# post-me
 
-<h1 align='center'>ibridge</h1>
+`post-me` is a library that facilitates two way communication between windows, for example between a parent and an iframe, a worker, a tab, or a popup.
 
-`ibridge` is a library that facilitates two way communication with web workers, iframes, popups, and more.
+Under the hood `post-me` uses the low level [`postMessage`](https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage) API.
 
-Under the hood `ibridge` uses the low level [`postMessage`](https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage) API.
-
-`ibridge` was inspired by [`postmate`](https://github.com/dollarshaveclub/postmate), and it provides several major improvements:
+`post-me` was inspired by [`postmate`](https://github.com/dollarshaveclub/postmate), and it provides several major improvements:
   - Native `typescript` support to allow strong typings of method calls and event payloads during development.
   - Method calls can have both arguments and a return value.
   - Both parent and child can expose methods and events (instead of child only).
@@ -17,7 +16,7 @@ Under the hood `ibridge` uses the low level [`postMessage`](https://developer.mo
   - Create multiple concurrent connections.
 
 ## Demo
-In this [live demo](https://ibridge-js.github.io/ibridge/) a parent window achieves two-way communication with its 5 children (4 iframes and 1 web worker).
+In this [live demo](https://alesgenova.github.io/post-me/) a parent window achieves two-way communication with its 5 children (4 iframes and 1 web worker).
 
 ## Usage
 To establish a connection between two windows follow the steps below:
@@ -35,7 +34,7 @@ Refer to the code snippet below as an example of these steps.
 
 ### Parent code
 ```typescript
-import { ParentHandshake, WindowMessenger } from 'ibridge';
+import { ParentHandshake, WindowMessenger } from 'post-me';
 
 // Create the child window any way you like (iframe here, but could be popup or tab too)
 const childFrame = document.createElement('iframe');
@@ -78,7 +77,7 @@ ParentHandshake(methods, messenger);
 
 ### Child code
 ```typescript
-import { ChildHandshake, WindowMessenger } from 'ibridge';
+import { ChildHandshake, WindowMessenger } from 'post-me';
 
 // Define the methods you want to expose to the other window.
 // Methods can either return values or Promises
@@ -115,7 +114,7 @@ ChildHandshake(methods, messenger)
 ```
 
 ## Typescript
-Thanks to `ibridge` typescript support, the correctness of the methods call arguments and event payloads can be statically enforced during development.
+Thanks to `post-me` typescript support, the correctness of the methods call arguments and event payloads can be statically enforced during development.
 
 Ideally methods and events types should be defined in a third package that will be imported by both the parent and the child. This way, it will be ensured that both applications are working with up to date type definition.
 
@@ -145,7 +144,7 @@ export type ChildEvents = {
 
 ### Parent code
 ```typescript
-import { ParentHandshake, WindowMessenger, Connection } from 'ibridge';
+import { ParentHandshake, WindowMessenger, Connection } from 'post-me';
 
 import { ParentMethods, ParentEvents, ChildMethods, ChildEvents} from '/path/to/common';
 
@@ -190,7 +189,7 @@ ParentHandshake(methods, messenger);
 
 ### Child code
 ```typescript
-import { ChildHandshake, WindowMessenger, Connection } from 'ibridge';
+import { ChildHandshake, WindowMessenger, Connection } from 'post-me';
 
 import { ParentMethods, ParentEvents, ChildMethods, ChildEvents} from '/path/to/common';
 
@@ -228,13 +227,13 @@ ChildHandshake(methods, messenger)
 ```
 
 ## Workers
-A minimal example of using `ibridge` with a web worker can be found in the demo source code.
-  - Parent: [source](https://github.com/ibridge-js/ibridge/blob/main/demo/parent.js#L162-L165)
-  - Worker: [source](https://github.com/ibridge-js/ibridge/blob/main/demo/worker.js)
+A minimal example of using `post-me` with a web worker can be found in the demo source code.
+  - Parent: [source](https://github.com/alesgenova/post-me/blob/main/demo/parent.js#L162-L165)
+  - Worker: [source](https://github.com/alesgenova/post-me/blob/main/demo/worker.js)
 
 ### Parent code
 ```typescript
-import { ParentHandshake, WorkerMessenger } from 'ibridge';
+import { ParentHandshake, WorkerMessenger } from 'post-me';
 
 // Create a dedicated web worker.
 const worker = new Worker('./worker.js');
@@ -261,16 +260,16 @@ ParentHandshake(methods, messenger).then((connection) => {
 
 ### Worker code
 ```typescript
-importScripts('./ibridge.umd.js');
-const Ibridge = self['ibridge'];
+importScripts('./post-me.umd.js');
+const PostMe = self['post-me'];
 
 const methods = {
   sum: (x, y) => x + y,
   mul: (x, y) => x * y,
 };
 
-const messenger = new Ibridge.WorkerMessenger({ worker: self });
-Ibridge.ChildHandshake(methods, messenger).then((_connection) => {
+const messenger = new PostMe.WorkerMessenger({ worker: self });
+PostMe.ChildHandshake(methods, messenger).then((_connection) => {
   console.log('Worker successfully connected');
 });
 ```
