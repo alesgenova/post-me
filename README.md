@@ -274,3 +274,36 @@ PostMe.ChildHandshake(methods, messenger).then((_connection) => {
   console.log('Worker successfully connected');
 });
 ```
+
+## Debugging
+`post-me` provides facilities to inspect each low level message exchanged between the two ends.
+
+To enable debugging, simply decorate any `Messenger` instance with the provided `DebugMessenger` decorator.
+
+You can optionally pass to the decorator your own logging function (a glorified `console.log` by default), which can be useful to make the output more readable, or to inspect messages in automated tests.
+
+### Example
+```typescript
+import { ParentHandshake, WindowMessenger, DebugMessenger } from 'post-me';
+
+import debug from 'debug';          // Use the full feature logger from the debug library
+// import { debug } from 'post-me'; // Or the lightweight implementation provided
+
+let messenger = new WindowMessenger({
+  localWindow: window,
+  remoteWindow: childWindow,
+  remoteOrigin: '*'
+});
+
+// To enable debugging of each message exchange, decorate the messenger with DebugMessenger
+const log = debug('post-me:parent'); // optional
+messenger = DebugMessenger(messenger, log);
+
+ParentHandshake({}, messenger).then((connection) => {
+  // ...
+});
+
+```
+
+### Output
+![debug output](debug.png)

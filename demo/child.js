@@ -1,4 +1,11 @@
-import { ChildHandshake, WindowMessenger } from './post-me.esm.js';
+import {
+  ChildHandshake,
+  WindowMessenger,
+  DebugMessenger,
+} from './post-me.esm.js';
+
+const debugNamespace = `post-me:${window.name}`;
+debug.enable(debugNamespace);
 
 let title = '';
 let color = '#ffffff';
@@ -22,11 +29,13 @@ const methods = {
   },
 };
 
-const messenger = new WindowMessenger({
+const log = debug(debugNamespace);
+let messenger = new WindowMessenger({
   localWindow: window,
   remoteWindow: window.parent,
   remoteOrigin: '*',
 });
+messenger = DebugMessenger(messenger, log);
 ChildHandshake(methods, messenger).then((connection) => {
   const localHandle = connection.localHandle();
   const remoteHandle = connection.remoteHandle();

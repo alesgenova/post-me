@@ -2,7 +2,12 @@ import {
   ParentHandshake,
   WindowMessenger,
   WorkerMessenger,
+  DebugMessenger,
 } from './post-me.esm.js';
+
+debug.enable(
+  'post-me:parent0,post-me:parent1,post-me:parent2,post-me:parent3,post-me:parentW'
+);
 
 let title = 'Parent';
 let color = '#eeeeee';
@@ -50,6 +55,7 @@ const createChildWindow = (i) => {
   return new Promise((resolve) => {
     const childContainer = document.getElementById(`child${i}-container`);
     const childFrame = document.createElement('iframe');
+    childFrame.name = `child${i}`;
     childFrame.src = './child.html';
     childFrame.width = '100%';
     childFrame.height = '100%';
@@ -62,11 +68,13 @@ const createChildWindow = (i) => {
 };
 
 const makeHandshake = (i, childWindow) => {
-  const messenger = new WindowMessenger({
+  const log = debug(`post-me:parent${i}`);
+  let messenger = new WindowMessenger({
     localWindow: window,
     remoteWindow: childWindow,
     remoteOrigin: '*',
   });
+  messenger = DebugMessenger(messenger, log);
   return ParentHandshake(methods, messenger);
 };
 
@@ -160,8 +168,9 @@ children.forEach((i) => initChild(i));
 // Create the worker
 {
   const worker = new Worker('./worker.js');
-
-  const messenger = new WorkerMessenger({ worker });
+  const log = debug('post-me:parentW');
+  let messenger = new WorkerMessenger({ worker });
+  messenger = DebugMessenger(messenger, log);
 
   ParentHandshake({}, messenger).then((connection) => {
     const remoteHandle = connection.remoteHandle();
