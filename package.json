@@ -1,6 +1,6 @@
 {
   "name": "post-me",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A library to facilitate communication between windows (iframe, worker, popup, ...)",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
