@@ -65,7 +65,7 @@ export class WorkerMessenger implements Messenger {
   postMessage: (message: any) => void;
   addMessageListener: (listener: MessageListener) => ListenerRemover;
 
-  constructor({ worker }: { worker: Worker | DedicatedWorkerGlobalScope }) {
+  constructor({ worker }: { worker: Worker }) {
     this.postMessage = (message) => {
       worker.postMessage(message);
     };

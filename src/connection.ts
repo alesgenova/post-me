@@ -123,9 +123,9 @@ export class ConcreteConnection<M0 extends MethodsType> implements Connection {
         return;
       }
 
-      for (let listener of listeners) {
+      listeners.forEach((listener) => {
         listener(payload);
-      }
+      });
 
       return;
     } else if (isErrorMessage(data)) {

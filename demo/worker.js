@@ -1,5 +1,5 @@
 importScripts('https://unpkg.com/debug-browser/dist/index.js');
-importScripts('./post-me.umd.js');
+importScripts('./post-me.js');
 
 const postMe = self['post-me'];
 const debug = self['debug'];
