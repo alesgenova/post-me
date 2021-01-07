@@ -71,7 +71,9 @@ export class Emitter<E extends EventsType> implements IEmitter<E> {
 
   protected removeAllListeners() {
     Object.values(this.listeners).forEach((listeners) => {
-      listeners?.clear();
+      if (listeners) {
+        listeners.clear();
+      }
     });
   }
 }
