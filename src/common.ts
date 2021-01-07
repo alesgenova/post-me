@@ -38,3 +38,12 @@ export type ItemArgs<T> = T extends (
 ) => ValueOrPromise<unknown>
   ? A
   : [];
+
+export function createUniqueIdFn() {
+  let __id = 0;
+  return function () {
+    const id = __id;
+    __id += 1;
+    return id;
+  };
+}

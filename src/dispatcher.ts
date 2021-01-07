@@ -1,4 +1,4 @@
-import { IdType, KeyType } from './common';
+import { IdType, KeyType, createUniqueIdFn } from './common';
 import { Messenger } from './messenger';
 import { Emitter } from './emitter';
 import {
@@ -31,9 +31,12 @@ export class Dispatcher extends Emitter<DispatcherEvents> {
   private messenger: Messenger;
   private sessionId: IdType;
   private removeMessengerListener: () => void;
+  private uniqueId: () => IdType;
 
   constructor(messenger: Messenger, sessionId: IdType) {
     super();
+
+    this.uniqueId = createUniqueIdFn();
 
     this.messenger = messenger;
     this.sessionId = sessionId;
@@ -95,15 +98,6 @@ export class Dispatcher extends Emitter<DispatcherEvents> {
     this.removeMessengerListener();
     this.removeAllListeners();
   }
-
-  private uniqueId: () => IdType = (() => {
-    let __id = 0;
-    return () => {
-      const id = __id;
-      __id += 1;
-      return id;
-    };
-  })();
 }
 
 export type ParentHandshakeDispatcherEvents = {

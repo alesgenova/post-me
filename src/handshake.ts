@@ -1,4 +1,4 @@
-import { IdType } from './common';
+import { createUniqueIdFn } from './common';
 import { MethodsType } from './common';
 import { Messenger } from './messenger';
 import {
@@ -9,14 +9,7 @@ import {
 import { Connection, ConcreteConnection } from './connection';
 import { MessageType } from './messages';
 
-const uniqueSessionId: () => IdType = (() => {
-  let __sessionId = 0;
-  return () => {
-    const sessionId = __sessionId;
-    __sessionId += 1;
-    return sessionId;
-  };
-})();
+const uniqueSessionId = createUniqueIdFn();
 
 const runUntil = (
   worker: () => void,
