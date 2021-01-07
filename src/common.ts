@@ -1,4 +1,9 @@
 export type IdType = number;
+export type KeyType = string | number;
+
+export type MethodsType = Record<KeyType, Callable<any[], ValueOrPromise<any>>>;
+
+export type EventsType = Record<KeyType, any>;
 
 export type Callable<A extends Array<any>, R> = (...args: A) => R;
 

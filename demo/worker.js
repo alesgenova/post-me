@@ -14,4 +14,4 @@ const methods = {
 const log = debug('post-me:worker');
 let messenger = new postMe.WorkerMessenger({ worker: self });
 messenger = postMe.DebugMessenger(messenger, log);
-postMe.ChildHandshake(methods, messenger).then((_connection) => {});
+postMe.ChildHandshake(messenger, methods).then((_connection) => {});
