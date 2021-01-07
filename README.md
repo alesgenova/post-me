@@ -55,7 +55,7 @@ const messenger = new WindowMessenger({
   remoteWindow: childWindow,
   remoteOrigin: '*'
 });
-ParentHandshake(methods, messenger);
+ParentHandshake(messenger, methods)
   .then((connection) => {
     const localHandle = connection.localHandle();
     const remoteHandle = connection.remoteHandle();
@@ -93,7 +93,7 @@ const messenger = new WindowMessenger({
   remoteOrigin: '*'
 });
 const messenger = new WindowMessenger({ remoteOrigin: '*' });
-ChildHandshake(methods, messenger)
+ChildHandshake(messenger, methods)
   .then((connection) => {
     const localHandle = connection.localHandle();
     const remoteHandle = connection.remoteHandle();
@@ -115,9 +115,14 @@ ChildHandshake(methods, messenger)
 ```
 
 ## Typescript
-Thanks to `post-me` typescript support, the correctness of the methods call arguments and event payloads can be statically enforced during development.
+Thanks to `post-me` extensive typescript support, the correctness of the following items can be statically checked during development:
+- Method names
+- Argument number and types
+- Return values type
+- Event names
+- Event payload type
 
-Ideally methods and events types should be defined in a third package that will be imported by both the parent and the child. This way, it will be ensured that both applications are working with up to date type definition.
+Ideally methods and events types should be defined in a place accessible to the code of both parent and child, so that they can both import the same type definition. This way, it will be ensured that the contract between the parties will be enforced.
 
 Below a modified version of the previous example using typescript.
 
@@ -145,7 +150,7 @@ export type ChildEvents = {
 
 ### Parent code
 ```typescript
-import { ParentHandshake, WindowMessenger, Connection } from 'post-me';
+import { ParentHandshake, WindowMessenger, LocalHandle, RemoteHandle } from 'post-me';
 
 import { ParentMethods, ParentEvents, ChildMethods, ChildEvents} from '/path/to/common';
 
@@ -167,10 +172,10 @@ const messenger = new WindowMessenger({
   remoteWindow: childWindow,
   remoteOrigin: '*'
 });
-ParentHandshake(methods, messenger);
-  .then((connection: Connection<ParentEvents, ChildMethods, ChildEvents>) => {
-    const localHandle = connection.localHandle();
-    const remoteHandle = connection.remoteHandle();
+ParentHandshake(messenger, methods)
+  .then((connection) => {
+    const localHandle: LocalHandle<ParentEvents> = connection.localHandle();
+    const remoteHandle: RemoteHandle<ChildMethods, ChildEvents> = connection.remoteHandle();
 
     // Call a method on the child
     remoteHandle.call('baz', 3)
@@ -190,7 +195,7 @@ ParentHandshake(methods, messenger);
 
 ### Child code
 ```typescript
-import { ChildHandshake, WindowMessenger, Connection } from 'post-me';
+import { ChildHandshake, WindowMessenger, LocalHandle, RemoteHandle } from 'post-me';
 
 import { ParentMethods, ParentEvents, ChildMethods, ChildEvents} from '/path/to/common';
 
@@ -206,10 +211,10 @@ const messenger = new WindowMessenger({
   remoteWindow: window.parent,
   remoteOrigin: '*'
 });
-ChildHandshake(methods, messenger)
-  .then((connection: Connection<ChildEvents, ParentMethods, ParentEvents>) => {
-    const localHandle = connection.localHandle();
-    const remoteHandle = connection.remoteHandle();
+ChildHandshake(messenger, methods)
+  .then((connection) => {
+    const localHandle: LocalHandle<ChildEvents> = connection.localHandle();
+    const remoteHandle: RemoteHandle<ParentMethods, ParentEvents> = connection.remoteHandle();
 
     // Call a method on the parent
     remoteHandle.call('foo', 'ciao', 2)
@@ -241,9 +246,8 @@ const worker = new Worker('./worker.js');
 
 // Start the handshake
 const messenger = new WorkerMessenger({ worker });
-const methods = {};
 
-ParentHandshake(methods, messenger).then((connection) => {
+ParentHandshake(messenger).then((connection) => {
   const remoteHandle = connection.remoteHandle();
 
   // Call a method on the worker
@@ -270,7 +274,7 @@ const methods = {
 };
 
 const messenger = new PostMe.WorkerMessenger({ worker: self });
-PostMe.ChildHandshake(methods, messenger).then((_connection) => {
+PostMe.ChildHandshake(messenger, methods).then((_connection) => {
   console.log('Worker successfully connected');
 });
 ```
@@ -299,7 +303,7 @@ let messenger = new WindowMessenger({
 const log = debug('post-me:parent'); // optional
 messenger = DebugMessenger(messenger, log);
 
-ParentHandshake({}, messenger).then((connection) => {
+ParentHandshake(messenger).then((connection) => {
   // ...
 });
 

@@ -75,7 +75,7 @@ const makeHandshake = (i, childWindow) => {
     remoteOrigin: '*',
   });
   messenger = DebugMessenger(messenger, log);
-  return ParentHandshake(methods, messenger);
+  return ParentHandshake(messenger, methods);
 };
 
 const createChildControls = (i, controlsContainer, connection) => {
@@ -172,7 +172,7 @@ children.forEach((i) => initChild(i));
   let messenger = new WorkerMessenger({ worker });
   messenger = DebugMessenger(messenger, log);
 
-  ParentHandshake({}, messenger).then((connection) => {
+  ParentHandshake(messenger, {}).then((connection) => {
     const remoteHandle = connection.remoteHandle();
 
     const title = document.createElement('h4');

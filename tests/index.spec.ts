@@ -110,8 +110,8 @@ function makeHandshake(
     remoteOrigin: parentWindow.origin,
   });
   const handshakes = [
-    ParentHandshake(parentMethods, parentMessenger),
-    ChildHandshake(childMethods, childMessenger),
+    ParentHandshake(parentMessenger, parentMethods),
+    ChildHandshake(childMessenger, childMethods),
   ] as const;
 
   return Promise.all(handshakes);
@@ -123,8 +123,7 @@ function sleep(duration: number): Promise<void> {
 
 test('handshake', () => {
   return new Promise<void>((resolve) => {
-    makeHandshake().then(([parentConnection, childConnection]) => {
-      expect(parentConnection.sessionId()).toEqual(childConnection.sessionId());
+    makeHandshake().then(([_parentConnection, _childConnection]) => {
       resolve();
     });
   });
@@ -230,6 +229,20 @@ test('emit', () => {
         });
         tasks.push(task1);
 
+        const task2 = new Promise((resolve) => {
+          let count = 0;
+          remoteHandle.once('tapped').then((data) => {
+            expect(data).toEqual(messageFromChild);
+            count += 1;
+          });
+
+          setTimeout(() => {
+            expect(count).toEqual(1);
+            resolve(count);
+          }, maxRunTime);
+        });
+        tasks.push(task2);
+
         const localHanlde = parentConnection.localHandle();
         setTimeout(() => {
           for (let i = 0; i < nEmits; ++i) {
@@ -272,6 +285,20 @@ test('emit', () => {
           }, maxRunTime);
         });
         tasks.push(task1);
+
+        const task2 = new Promise((resolve) => {
+          let count = 0;
+          remoteHandle.once('opened').then((data) => {
+            expect(data).toEqual(messageFromParent);
+            count += 1;
+          });
+
+          setTimeout(() => {
+            expect(count).toEqual(1);
+            resolve(count);
+          }, maxRunTime);
+        });
+        tasks.push(task2);
 
         const localHanlde = childConnection.localHandle();
         setTimeout(() => {
@@ -362,7 +389,54 @@ test('error', () => {
   });
 });
 
-test('handshake-fail', () => {
+test('close', () => {
+  return new Promise<void>((resolve, reject) => {
+    makeHandshake().then(([parentConnection, childConnection]) => {
+      const tasks: Promise<any>[] = [];
+
+      const maxRunTime = 500;
+      const nEmits = 4;
+
+      const messageFromChild: ChildEvents['tapped'] =
+        'Emitting an important message!';
+
+      // Code in the parent app
+      {
+        const remoteHandle = parentConnection.remoteHandle();
+
+        const task0 = new Promise<void>((resolve, reject) => {
+          remoteHandle.addEventListener('tapped', (data) => {
+            expect(data).toEqual(messageFromChild);
+            reject(new Error(`Shouldn't receive after connection close`));
+          });
+
+          setTimeout(() => {
+            parentConnection.close();
+          }, 0);
+
+          setTimeout(() => {
+            resolve();
+          }, maxRunTime);
+        });
+        tasks.push(task0);
+      }
+
+      // Code in the child app
+      {
+        const localHanlde = childConnection.localHandle();
+        setTimeout(() => {
+          for (let i = 0; i < nEmits; ++i) {
+            localHanlde.emit('tapped', messageFromChild);
+          }
+        }, 50);
+      }
+
+      Promise.all(tasks).then(() => resolve());
+    });
+  });
+});
+
+test('handshake fail due to wrong origin', () => {
   return new Promise<void>((resolve, reject) => {
     const parentOrigin = 'https://parent.example.com';
     const childOrigin = 'https://child.example.com';
@@ -382,21 +456,18 @@ test('handshake-fail', () => {
       remoteOrigin: wrongParentOrigin,
     });
 
-    const parentHandshake = ParentHandshake({}, parentMessenger);
-    const childHandshake = ChildHandshake({}, childMessenger);
+    const parentHandshake = ParentHandshake(parentMessenger);
+    const childHandshake = ChildHandshake(childMessenger);
 
-    parentHandshake.then((_connection) => {
-      reject(new Error('The handshake should be failing. - parent'));
-    });
+    parentHandshake
+      .then((_connection) => {
+        reject(new Error('The handshake should be failing. - parent'));
+      })
+      .catch(resolve);
 
     childHandshake.then((_connection) => {
       reject(new Error('The handshake should be failing. - child'));
     });
-
-    // The connection will never be established nor fail, resolve test if nothing happens.
-    setTimeout(() => {
-      resolve();
-    }, maxRunTime);
   });
 });
 
@@ -580,7 +651,7 @@ test('parent handshake before child', async () => {
     remoteWindow: childWindow,
     remoteOrigin: childWindow.origin,
   });
-  parentConnection = ParentHandshake(parentMethods, parentMessenger);
+  parentConnection = ParentHandshake(parentMessenger);
 
   await sleep(100);
 
@@ -589,7 +660,7 @@ test('parent handshake before child', async () => {
     remoteWindow: parentWindow,
     remoteOrigin: parentWindow.origin,
   });
-  childConnection = ChildHandshake(childMethods, childMessenger);
+  childConnection = ChildHandshake(childMessenger);
   await Promise.all([parentConnection, childConnection]);
 });
 
@@ -605,7 +676,7 @@ test('child handshake before parent', async () => {
     remoteWindow: parentWindow,
     remoteOrigin: parentWindow.origin,
   });
-  childConnection = ChildHandshake(childMethods, childMessenger);
+  childConnection = ChildHandshake(childMessenger);
 
   await sleep(100);
 
@@ -614,7 +685,7 @@ test('child handshake before parent', async () => {
     remoteWindow: childWindow,
     remoteOrigin: childWindow.origin,
   });
-  parentConnection = ParentHandshake(parentMethods, parentMessenger);
+  parentConnection = ParentHandshake(parentMessenger);
 
   await Promise.all([childConnection, parentConnection]);
 });

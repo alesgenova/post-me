@@ -36,7 +36,7 @@ let messenger = new WindowMessenger({
   remoteOrigin: '*',
 });
 messenger = DebugMessenger(messenger, log);
-ChildHandshake(methods, messenger).then((connection) => {
+ChildHandshake(messenger, methods).then((connection) => {
   const localHandle = connection.localHandle();
   const remoteHandle = connection.remoteHandle();
 

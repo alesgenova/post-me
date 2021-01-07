@@ -1,65 +1,52 @@
-import { IdType, InnerType } from './common';
-import { Messenger } from './messenger';
-import { LocalHandle, RemoteHandle, MethodsType, EventsType } from './handle';
+import { MethodsType, EventsType, KeyType } from './common';
+import { Dispatcher } from './dispatcher';
 import {
-  Message,
-  createCallMessage,
-  createErrorMessage,
-  createResponsMessage,
-  isCallMessage,
-  isMessage,
-  isResponseMessage,
-  createEventMessage,
-  isEventMessage,
-  isErrorMessage,
-} from './message';
+  LocalHandle,
+  RemoteHandle,
+  ConcreteRemoteHandle,
+  ConcreteLocalHandle,
+} from './handle';
+import { MessageType, CallMessage, EventMessage } from './messages';
 
 export interface Connection<
-  E0 extends EventsType = {},
-  M1 extends MethodsType = {},
-  E1 extends EventsType = {}
+  E0 extends EventsType = EventsType,
+  M1 extends MethodsType = MethodsType,
+  E1 extends EventsType = EventsType
 > {
-  sessionId: () => IdType;
   localHandle: () => LocalHandle<E0>;
   remoteHandle: () => RemoteHandle<M1, E1>;
-  destroy: () => void;
+  close: () => void;
 }
 
-type PromiseMethods<T = any, E = any> = {
-  resolve: (v: T) => void;
-  reject: (e: E) => void;
-};
-
 export class ConcreteConnection<M0 extends MethodsType> implements Connection {
-  private _localMethods: M0;
-  private _messenger: Messenger;
-  private _removeMainListener: () => void;
-  private _sessionId: IdType;
-  private _localHandle: LocalHandle;
-  private _remoteHandle: RemoteHandle;
-  private _requests: Record<IdType, PromiseMethods>;
-  private _eventListeners: Record<string, Set<(data: any) => void>>;
+  private dispatcher: Dispatcher;
+  private methods: M0;
+  private _remoteHandle: ConcreteRemoteHandle;
+  private _localHandle: ConcreteLocalHandle;
 
-  constructor(localMethods: M0, messenger: Messenger, sessionId: number) {
-    this._localMethods = localMethods;
-    this._messenger = messenger;
-    this._sessionId = sessionId;
-    this._requests = {};
-    this._eventListeners = {};
-
-    this._localHandle = {
-      emit: this.localEmit,
-    };
-
-    this._remoteHandle = {
-      call: this.remoteCall,
-      addEventListener: this.remoteAddEventListener,
-      removeEventListener: this.remoteRemoveEventListener,
-    };
-
-    this._removeMainListener = this._messenger.addMessageListener(
-      this.onMessage
+  constructor(dispatcher: Dispatcher, localMethods: M0) {
+    this.dispatcher = dispatcher;
+    this.methods = localMethods;
+    this._remoteHandle = new ConcreteRemoteHandle(
+      this.callRemoteMethod.bind(this)
     );
+    this._localHandle = new ConcreteLocalHandle(
+      this.dispatcher.emitToRemote.bind(this.dispatcher)
+    );
+
+    this.dispatcher.addEventListener(
+      MessageType.Call,
+      this.handleCall.bind(this)
+    );
+    this.dispatcher.addEventListener(
+      MessageType.Event,
+      this.handleEvent.bind(this)
+    );
+  }
+
+  close() {
+    this.dispatcher.close();
+    this._remoteHandle['removeAllListeners']();
   }
 
   localHandle() {
@@ -70,109 +57,12 @@ export class ConcreteConnection<M0 extends MethodsType> implements Connection {
     return this._remoteHandle;
   }
 
-  sessionId() {
-    return this._sessionId;
-  }
+  private handleCall(data: CallMessage<any[]>) {
+    const { requestId, methodName, args } = data;
 
-  destroy() {
-    this._removeMainListener();
-  }
-
-  private onMessage = (ev: MessageEvent) => {
-    const { data } = ev;
-
-    if (!isMessage(data)) {
-      return;
-    }
-
-    if (data.sessionId !== this.sessionId()) {
-      return;
-    }
-
-    if (isCallMessage(data)) {
-      const { requestId, name, args } = data;
-      (this.localCall as any)(name, ...args)
-        .then((value: any) => {
-          const message = createResponsMessage(
-            this.sessionId(),
-            requestId,
-            value
-          );
-          this.sendMessage(message);
-        })
-        .catch((e: any) => {
-          const message = createErrorMessage(this.sessionId(), requestId, e);
-          this.sendMessage(message);
-        });
-    } else if (isResponseMessage(data)) {
-      const { requestId, result } = data;
-      const promiseMethods = this._requests[requestId];
-      if (!promiseMethods) {
-        return;
-      }
-
-      promiseMethods.resolve(result);
-
-      delete this._requests[requestId];
-
-      return;
-    } else if (isEventMessage(data)) {
-      const { name, payload } = data;
-      const listeners = this._eventListeners[name];
-      if (!listeners) {
-        return;
-      }
-
-      listeners.forEach((listener) => {
-        listener(payload);
-      });
-
-      return;
-    } else if (isErrorMessage(data)) {
-      const { requestId, error } = data;
-      const promiseMethods = this._requests[requestId];
-      if (!promiseMethods) {
-        return;
-      }
-
-      promiseMethods.reject(error);
-
-      delete this._requests[requestId];
-
-      return;
-    }
-  };
-
-  private localEmit = (eventName: string, data: any) => {
-    const message = createEventMessage(
-      this.sessionId(),
-      eventName as string,
-      data
-    );
-    this.sendMessage(message);
-  };
-
-  private remoteCall = (methodName: string, ...args: any[]) => {
-    return new Promise<any>((resolve, reject) => {
-      const requestId = this.uniqueRequestId();
-      this._requests[requestId] = { resolve, reject };
-      const message = createCallMessage(
-        this.sessionId(),
-        requestId,
-        methodName as string,
-        ...args
-      );
-      this.sendMessage(message);
-    });
-  };
-
-  private localCall: <K extends keyof M0>(
-    methodName: K,
-    ...args: Parameters<M0[K]>
-  ) => Promise<InnerType<ReturnType<M0[K]>>> = (methodName, ...args) => {
-    return new Promise((resolve, reject) => {
-      const method = this._localMethods[methodName];
-      if (!method) {
+    const callMethod = new Promise<any>((resolve, reject) => {
+      const method = this.methods[methodName];
+      if (typeof method !== 'function') {
         reject(
           new Error(`The method "${methodName}" has not been implemented.`)
         );
@@ -180,46 +70,35 @@ export class ConcreteConnection<M0 extends MethodsType> implements Connection {
       }
 
       Promise.resolve(method(...args))
-        .then((val) => resolve(val))
-        .catch((e) => reject(e));
+        .then(resolve)
+        .catch(reject);
     });
-  };
 
-  private remoteAddEventListener = (
-    eventName: string,
-    callback: (data: any) => void
-  ) => {
-    let listeners = this._eventListeners[eventName as string];
-    if (!listeners) {
-      listeners = new Set();
-      this._eventListeners[eventName as string] = listeners;
-    }
-
-    listeners.add(callback);
-  };
-
-  private remoteRemoveEventListener = (
-    eventName: string,
-    callback: (data: any) => void
-  ) => {
-    let listeners = this._eventListeners[eventName as string];
-    if (!listeners) {
-      return;
-    }
-
-    listeners.delete(callback);
-  };
-
-  private sendMessage(message: Message<any>) {
-    this._messenger.postMessage(message);
+    callMethod
+      .then((value) => {
+        this.dispatcher.respondToRemote(requestId, value);
+      })
+      .catch((error) => {
+        this.dispatcher.respondToRemote(requestId, undefined, error);
+      });
   }
 
-  private uniqueRequestId: () => IdType = (() => {
-    let __requestId = 0;
-    return () => {
-      const requestId = __requestId;
-      __requestId += 1;
-      return requestId;
-    };
-  })();
+  private handleEvent(data: EventMessage<any>) {
+    const { eventName, payload } = data;
+    this._remoteHandle['emit'](eventName, payload);
+  }
+
+  private callRemoteMethod(methodName: KeyType, ...args: any[]): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const responseEvent = this.dispatcher.callOnRemote(methodName, ...args);
+      this.dispatcher.once(responseEvent).then((response) => {
+        const { result, error } = response;
+        if (error !== undefined) {
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      });
+    });
+  }
 }

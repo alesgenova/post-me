@@ -1,4 +1,9 @@
 export type IdType = number;
+export type KeyType = string | number;
+
+export type MethodsType = Record<KeyType, Callable<any[], ValueOrPromise<any>>>;
+
+export type EventsType = Record<KeyType, any>;
 
 export type Callable<A extends Array<any>, R> = (...args: A) => R;
 
@@ -33,3 +38,12 @@ export type ItemArgs<T> = T extends (
 ) => ValueOrPromise<unknown>
   ? A
   : [];
+
+export function createUniqueIdFn() {
+  let __id = 0;
+  return function () {
+    const id = __id;
+    __id += 1;
+    return id;
+  };
+}
