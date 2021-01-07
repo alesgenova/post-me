@@ -15,6 +15,7 @@ export interface Connection<
 > {
   localHandle: () => LocalHandle<E0>;
   remoteHandle: () => RemoteHandle<M1, E1>;
+  close: () => void;
 }
 
 export class ConcreteConnection<M0 extends MethodsType> implements Connection {
@@ -41,6 +42,11 @@ export class ConcreteConnection<M0 extends MethodsType> implements Connection {
       MessageType.Event,
       this.handleEvent.bind(this)
     );
+  }
+
+  close() {
+    this.dispatcher.close();
+    this._remoteHandle['removeAllListeners']();
   }
 
   localHandle() {
@@ -79,7 +85,7 @@ export class ConcreteConnection<M0 extends MethodsType> implements Connection {
 
   private handleEvent(data: EventMessage<any>) {
     const { eventName, payload } = data;
-    (this._remoteHandle as any).emit(eventName, payload);
+    this._remoteHandle['emit'](eventName, payload);
   }
 
   private callRemoteMethod(methodName: KeyType, ...args: any[]): Promise<any> {

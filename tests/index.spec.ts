@@ -389,6 +389,53 @@ test('error', () => {
   });
 });
 
+test('close', () => {
+  return new Promise<void>((resolve, reject) => {
+    makeHandshake().then(([parentConnection, childConnection]) => {
+      const tasks: Promise<any>[] = [];
+
+      const maxRunTime = 500;
+      const nEmits = 4;
+
+      const messageFromChild: ChildEvents['tapped'] =
+        'Emitting an important message!';
+
+      // Code in the parent app
+      {
+        const remoteHandle = parentConnection.remoteHandle();
+
+        const task0 = new Promise<void>((resolve, reject) => {
+          remoteHandle.addEventListener('tapped', (data) => {
+            expect(data).toEqual(messageFromChild);
+            reject(new Error(`Shouldn't receive after connection close`));
+          });
+
+          setTimeout(() => {
+            parentConnection.close();
+          }, 0);
+
+          setTimeout(() => {
+            resolve();
+          }, maxRunTime);
+        });
+        tasks.push(task0);
+      }
+
+      // Code in the child app
+      {
+        const localHanlde = childConnection.localHandle();
+        setTimeout(() => {
+          for (let i = 0; i < nEmits; ++i) {
+            localHanlde.emit('tapped', messageFromChild);
+          }
+        }, 50);
+      }
+
+      Promise.all(tasks).then(() => resolve());
+    });
+  });
+});
+
 test('handshake fail due to wrong origin', () => {
   return new Promise<void>((resolve, reject) => {
     const parentOrigin = 'https://parent.example.com';
