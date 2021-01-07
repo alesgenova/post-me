@@ -85,14 +85,22 @@ export function createResponsMessage<R>(
   result: R,
   error?: string
 ): ResponseMessage<R> {
-  return {
+  const message: ResponseMessage<R> = {
     type: MARKER,
     action: MessageType.Response,
     sessionId,
     requestId,
-    result,
-    error,
   };
+
+  if (result !== undefined) {
+    message.result = result;
+  }
+
+  if (error !== undefined) {
+    message.error = error;
+  }
+
+  return message;
 }
 
 export function createEventMessage<P>(
