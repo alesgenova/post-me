@@ -1,19 +1,23 @@
 [![workflow status](https://github.com/alesgenova/post-me/workflows/main/badge.svg?branch=main)](https://github.com/alesgenova/post-me/actions?query=workflow%3Amain+branch%3Amain)
 [![npm package](https://img.shields.io/npm/v/post-me.svg)](https://www.npmjs.com/package/post-me)
 [![codecov](https://codecov.io/gh/alesgenova/post-me/branch/main/graph/badge.svg)](https://codecov.io/gh/alesgenova/post-me)
-# post-me
 
-`post-me` is a library that facilitates two way communication with web workers and other windows (iframes, popups).
+<h1 align="center">post-me</h1>
 
-The API was inspired by [`postmate`](https://github.com/dollarshaveclub/postmate), and it provides several major improvements:
-  - A simple `Promise` based API.
-  - No dependencies, tiny footprint (2kb gzipped)
-  - Native `typescript` support to allow strong typings of method calls and event payloads during development.
-  - Method calls can have both arguments and a return value.
-  - Both parent and child can expose methods and events (instead of child only).
-  - Exceptions that occur in a method call can be caught by the caller.
-  - Already supports communication with other windows and web workers.
-  - Create multiple concurrent connections.
+__post-me__ is a library to communicate with web `Workers` and other `Windows` using a simple `Promise` based API.
+
+![diagram](./diagram.png)
+
+With __post-me__ it is easy for a parent (for example the main app) and a child (for example a worker or an iframe) to expose methods and custom events to each other.
+
+Main features:
+- Parent and child can both expose methods and/or events.
+- Strong typing of method names, arguments, return values, as well as event names and payloads.
+- Establish multiple concurrent connections.
+- Easily extensible to more use cases.
+- No dependencies: 2kb gzip bundle.
+- Excellent test coverage.
+- Open source (MIT)
 
 ## Demo
 In this [live demo](https://alesgenova.github.io/post-me/) a parent window achieves two-way communication with its 5 children (4 iframes and 1 web worker).
@@ -22,7 +26,7 @@ In this [live demo](https://alesgenova.github.io/post-me/) a parent window achie
 To establish a connection between two windows follow the steps below:
   - Create a `Messenger`, an object implementing the low level communication (`WindowMessenger` and `WorkerMessenger` already provided).
   - Initiate a handshake between the parent window and the child window by calling the `ParentHandshake()` and `ChildHandshake()` methods respectively.
-  - The `methods` parameter contain the methods that each window will expose to the other.
+  - The `methods` parameter contains the methods that each window will expose to the other.
   - The handshake returns a `Promise<Connection>` to the two windows.
   - Get a handle to the other window by calling the `connection.getRemoteHandle()` method.
     - Use `remoteHandle.call(methodName, ...args)` to call methods on the other window. It returns a `Promise` of the result.
@@ -115,7 +119,7 @@ ChildHandshake(messenger, methods)
 ```
 
 ## Typescript
-Thanks to `post-me` extensive typescript support, the correctness of the following items can be statically checked during development:
+Thanks to __post-me__ extensive typescript support, the correctness of the following items can be statically checked during development:
 - Method names
 - Argument number and types
 - Return values type
@@ -233,7 +237,7 @@ ChildHandshake(messenger, methods)
 ```
 
 ## Workers
-A minimal example of using `post-me` with a web worker can be found in the demo source code.
+A minimal example of using __post-me__ with a web worker can be found in the demo source code.
   - Parent: [source](https://github.com/alesgenova/post-me/blob/main/demo/parent.js#L162-L165)
   - Worker: [source](https://github.com/alesgenova/post-me/blob/main/demo/worker.js)
 
@@ -280,7 +284,7 @@ PostMe.ChildHandshake(messenger, methods).then((_connection) => {
 ```
 
 ## Debugging
-`post-me` provides facilities to inspect each low level message exchanged between the two ends.
+__post-me__ provides facilities to inspect each low level message exchanged between the two ends.
 
 To enable debugging, simply decorate any `Messenger` instance with the provided `DebugMessenger` decorator.
 
