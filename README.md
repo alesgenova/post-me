@@ -315,3 +315,12 @@ ParentHandshake(messenger).then((connection) => {
 
 ### Output
 ![debug output](debug.png)
+
+## References
+The __post-me__ API is loosely inspired by [postmate](https://github.com/dollarshaveclub/postmate), with several major improvements and fixes to outstanding issues:
+- Native typescript support
+- Method calls can have both arguments and a return value: ([#94](https://github.com/dollarshaveclub/postmate/issues/94))
+- Parent and child can both expose methods and/or events (instead of child only): [#118](https://github.com/dollarshaveclub/postmate/issues/118)
+- Exceptions that occur in a method call can be caught by the caller.
+- Better control over handshake origin and attempts: ([#150](https://github.com/dollarshaveclub/postmate/issues/150), [#195](https://github.com/dollarshaveclub/postmate/issues/195))
+- Multiple listeners for each event: ([#58](https://github.com/dollarshaveclub/postmate/issues/58))
