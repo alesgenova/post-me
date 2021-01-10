@@ -4,7 +4,7 @@
 
 <h1 align="center">post-me</h1>
 
-__post-me__ is a library to communicate with web `Workers` and other `Windows` using a simple `Promise` based API.
+<p align="center">Communicate with web <code>Workers</code> and other <code>Windows</code> using a simple <code>Promise</code> based API</p>
 
 ![diagram](./diagram.png)
 

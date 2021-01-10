@@ -13,21 +13,21 @@ export interface IEmitter<E extends EventsType> {
 }
 
 export class Emitter<E extends EventsType> implements IEmitter<E> {
-  private listeners: Partial<Record<keyof E, Set<(data: any) => void>>>;
+  private _listeners: Partial<Record<keyof E, Set<(data: any) => void>>>;
 
   constructor() {
-    this.listeners = {};
+    this._listeners = {};
   }
 
   addEventListener<K extends keyof E>(
     eventName: K,
     listener: (data: E[K]) => void
   ) {
-    let listeners = this.listeners[eventName];
+    let listeners = this._listeners[eventName];
 
     if (!listeners) {
       listeners = new Set();
-      this.listeners[eventName] = listeners;
+      this._listeners[eventName] = listeners;
     }
 
     listeners.add(listener);
@@ -37,7 +37,7 @@ export class Emitter<E extends EventsType> implements IEmitter<E> {
     eventName: K,
     listener: (data: E[K]) => void
   ) {
-    let listeners = this.listeners[eventName];
+    let listeners = this._listeners[eventName];
 
     if (!listeners) {
       return;
@@ -58,7 +58,7 @@ export class Emitter<E extends EventsType> implements IEmitter<E> {
   }
 
   protected emit<K extends keyof E>(eventName: K, data: E[K]) {
-    let listeners = this.listeners[eventName];
+    let listeners = this._listeners[eventName];
 
     if (!listeners) {
       return;
@@ -70,7 +70,7 @@ export class Emitter<E extends EventsType> implements IEmitter<E> {
   }
 
   protected removeAllListeners() {
-    Object.values(this.listeners).forEach((listeners) => {
+    Object.values(this._listeners).forEach((listeners) => {
       if (listeners) {
         listeners.clear();
       }
