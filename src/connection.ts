@@ -1,12 +1,11 @@
-import { MethodsType, EventsType, KeyType } from './common';
+import { MethodsType, EventsType } from './common';
 import { Dispatcher } from './dispatcher';
 import {
+  ConcreteLocalHandle,
+  ConcreteRemoteHandle,
   LocalHandle,
   RemoteHandle,
-  ConcreteRemoteHandle,
-  ConcreteLocalHandle,
-} from './handle';
-import { MessageType, CallMessage, EventMessage } from './messages';
+} from './handles';
 
 export interface Connection<
   E0 extends EventsType = EventsType,
@@ -19,34 +18,22 @@ export interface Connection<
 }
 
 export class ConcreteConnection<M0 extends MethodsType> implements Connection {
-  private dispatcher: Dispatcher;
-  private methods: M0;
+  private _dispatcher: Dispatcher;
   private _remoteHandle: ConcreteRemoteHandle;
   private _localHandle: ConcreteLocalHandle;
 
   constructor(dispatcher: Dispatcher, localMethods: M0) {
-    this.dispatcher = dispatcher;
-    this.methods = localMethods;
-    this._remoteHandle = new ConcreteRemoteHandle(
-      this.callRemoteMethod.bind(this)
+    this._dispatcher = dispatcher;
+    this._localHandle = new ConcreteLocalHandle<M0, any>(
+      dispatcher,
+      localMethods
     );
-    this._localHandle = new ConcreteLocalHandle(
-      this.dispatcher.emitToRemote.bind(this.dispatcher)
-    );
-
-    this.dispatcher.addEventListener(
-      MessageType.Call,
-      this.handleCall.bind(this)
-    );
-    this.dispatcher.addEventListener(
-      MessageType.Event,
-      this.handleEvent.bind(this)
-    );
+    this._remoteHandle = new ConcreteRemoteHandle<any, any>(dispatcher);
   }
 
   close() {
-    this.dispatcher.close();
-    this._remoteHandle['removeAllListeners']();
+    this._dispatcher.close();
+    this.remoteHandle().close();
   }
 
   localHandle() {
@@ -55,50 +42,5 @@ export class ConcreteConnection<M0 extends MethodsType> implements Connection {
 
   remoteHandle() {
     return this._remoteHandle;
-  }
-
-  private handleCall(data: CallMessage<any[]>) {
-    const { requestId, methodName, args } = data;
-
-    const callMethod = new Promise<any>((resolve, reject) => {
-      const method = this.methods[methodName];
-      if (typeof method !== 'function') {
-        reject(
-          new Error(`The method "${methodName}" has not been implemented.`)
-        );
-        return;
-      }
-
-      Promise.resolve(method(...args))
-        .then(resolve)
-        .catch(reject);
-    });
-
-    callMethod
-      .then((value) => {
-        this.dispatcher.respondToRemote(requestId, value);
-      })
-      .catch((error) => {
-        this.dispatcher.respondToRemote(requestId, undefined, error);
-      });
-  }
-
-  private handleEvent(data: EventMessage<any>) {
-    const { eventName, payload } = data;
-    this._remoteHandle['emit'](eventName, payload);
-  }
-
-  private callRemoteMethod(methodName: KeyType, ...args: any[]): Promise<any> {
-    return new Promise((resolve, reject) => {
-      const responseEvent = this.dispatcher.callOnRemote(methodName, ...args);
-      this.dispatcher.once(responseEvent).then((response) => {
-        const { result, error } = response;
-        if (error !== undefined) {
-          reject(error);
-        } else {
-          resolve(result);
-        }
-      });
-    });
   }
 }

@@ -7,7 +7,7 @@ import {
   DebugMessenger,
   debug,
 } from './messenger';
-import { RemoteHandle, LocalHandle } from './handle';
+import { RemoteHandle, LocalHandle } from './handles';
 
 export {
   ParentHandshake,

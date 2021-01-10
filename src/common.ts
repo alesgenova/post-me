@@ -1,5 +1,5 @@
 export type IdType = number;
-export type KeyType = string | number;
+export type KeyType = string;
 
 export type MethodsType = Record<KeyType, Callable<any[], ValueOrPromise<any>>>;
 
