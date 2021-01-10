@@ -1,16 +1,19 @@
 import { ParentHandshake, ChildHandshake } from '../src/handshake';
 import { Connection } from '../src/connection';
+import { Emitter } from '../src/emitter';
 import {
   Messenger,
   WindowMessenger,
   DebugMessenger,
   debug,
+  WorkerMessenger,
 } from '../src/messenger';
 
 import { JSDOM } from 'jsdom';
 
 import MessageEventJSDOM from 'jsdom/lib/jsdom/living/generated/MessageEvent';
 import { fireAnEvent } from 'jsdom/lib/jsdom/living/helpers/events';
+import { RemoteHandle } from '../src/handles';
 
 type ChildMethods = {
   foo: (x: number) => number;
@@ -723,4 +726,48 @@ test('debug', () => {
   expect(jestLog).toHaveBeenCalledWith(namespace, '➡️ sending message', 2);
   expect(jestLog).toHaveBeenCalledWith(namespace, '⬅️ received message', 2);
   expect(jestLog).toHaveBeenCalledTimes(4);
+});
+
+function MockWorker(script: (self: any) => void) {
+  const worker: any = new Emitter();
+  const self: any = new Emitter();
+
+  self.postMessage = (payload: any) => {
+    worker.emit('message', { data: payload });
+  };
+
+  worker.postMessage = (payload: any) => {
+    self.emit('message', { data: payload });
+  };
+
+  script(self);
+
+  return worker;
+}
+
+test('worker', () => {
+  return new Promise<void>((resolve, reject) => {
+    const workerMethods = {
+      sum: (x: number, y: number) => x + y,
+    };
+
+    const worker = MockWorker((self) => {
+      const messenger = new WorkerMessenger({ worker: self });
+      ChildHandshake(messenger, workerMethods);
+    });
+
+    const messenger = new WorkerMessenger({ worker });
+    ParentHandshake(messenger).then((connection) => {
+      const remoteHandle: RemoteHandle<
+        typeof workerMethods,
+        {}
+      > = connection.remoteHandle();
+      remoteHandle.call('sum', 15, 17).then((result) => {
+        expect(result).toEqual(workerMethods.sum(15, 17));
+        resolve();
+      });
+    });
+
+    setTimeout(reject, 1000);
+  });
 });
