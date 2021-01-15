@@ -5,14 +5,17 @@ import {
   isMessage,
   isCallMessage,
   isResponseMessage,
+  isCallbackMessage,
   isEventMessage,
   MessageType,
   CallMessage,
   EventMessage,
   ResponseMessage,
+  CallbackMessage,
   createCallMessage,
   createEventMessage,
   createResponsMessage,
+  createCallbackMessage,
   HandshakeResponseMessage,
   isHandshakeResponseMessage,
   createHandshakeRequestMessage,
@@ -21,10 +24,22 @@ import {
   createHandshakeResponseMessage,
 } from './messages';
 
+function makeCallbackEvent(requestId: IdType): string {
+  return `callback_${requestId}`;
+}
+
+function makeResponseEvent(requestId: IdType): string {
+  return `response_${requestId}`;
+}
+
 export type DispatcherEvents = {
+  [x: string]:
+    | CallMessage<any[]>
+    | EventMessage<any>
+    | CallbackMessage<any[]>
+    | ResponseMessage<any>;
   [MessageType.Call]: CallMessage<any[]>;
   [MessageType.Event]: EventMessage<any>;
-  [x: number]: ResponseMessage<any>;
 };
 
 export class Dispatcher extends Emitter<DispatcherEvents> {
@@ -60,23 +75,27 @@ export class Dispatcher extends Emitter<DispatcherEvents> {
     if (isCallMessage(data)) {
       this.emit(MessageType.Call, data);
     } else if (isResponseMessage(data)) {
-      this.emit(data.requestId, data);
+      this.emit(makeResponseEvent(data.requestId), data);
     } else if (isEventMessage(data)) {
       this.emit(MessageType.Event, data);
+    } else if (isCallbackMessage(data)) {
+      this.emit(makeCallbackEvent(data.requestId), data);
     }
   }
 
-  callOnRemote(methodName: KeyType, ...args: any[]): IdType {
+  callOnRemote(methodName: KeyType, args: any[]) {
     const requestId = this.uniqueId();
+    const callbackEvent = makeCallbackEvent(requestId);
+    const responseEvent = makeResponseEvent(requestId);
     const message = createCallMessage(
       this.sessionId,
       requestId,
       methodName,
-      ...args
+      args
     );
     this.messenger.postMessage(message);
 
-    return requestId;
+    return { callbackEvent, responseEvent };
   }
 
   respondToRemote(requestId: IdType, value: any, error?: any) {
@@ -85,6 +104,16 @@ export class Dispatcher extends Emitter<DispatcherEvents> {
       requestId,
       value,
       error
+    );
+    this.messenger.postMessage(message);
+  }
+
+  callbackToRemote(requestId: IdType, callbackId: IdType, args: any[]) {
+    const message = createCallbackMessage(
+      this.sessionId,
+      requestId,
+      callbackId,
+      args
     );
     this.messenger.postMessage(message);
   }
