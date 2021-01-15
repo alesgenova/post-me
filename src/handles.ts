@@ -1,7 +1,14 @@
 import { InnerType, MethodsType, EventsType } from './common';
 import { Emitter, IEmitter } from './emitter';
 import { Dispatcher } from './dispatcher';
-import { MessageType, CallMessage, EventMessage } from './messages';
+import {
+  MessageType,
+  CallMessage,
+  EventMessage,
+  ResponseMessage,
+  CallbackMessage,
+} from './messages';
+import { createCallbackProxy, isCallbackProxy } from './proxy';
 
 export interface RemoteHandle<
   M extends MethodsType = MethodsType,
@@ -45,12 +52,54 @@ export class ConcreteRemoteHandle<
     ...args: Parameters<M[K]>
   ): Promise<InnerType<ReturnType<M[K]>>> {
     return new Promise((resolve, reject) => {
-      const responseEvent = this._dispatcher.callOnRemote(
+      const sanitizedArgs: any[] = [];
+      const callbacks: Function[] = [];
+      let callbackId = 0;
+      args.forEach((arg) => {
+        if (typeof arg === 'function') {
+          callbacks.push(arg);
+          sanitizedArgs.push(createCallbackProxy(callbackId));
+          callbackId += 1;
+        } else {
+          sanitizedArgs.push(arg);
+        }
+      });
+
+      const hasCallbacks = callbacks.length > 0;
+
+      let callbackListener:
+        | undefined
+        | ((data: CallbackMessage<any>) => void) = undefined;
+
+      if (hasCallbacks) {
+        callbackListener = (data) => {
+          const { callbackId, args } = data;
+          callbacks[callbackId](...args);
+        };
+      }
+
+      const { callbackEvent, responseEvent } = this._dispatcher.callOnRemote(
         methodName as string,
-        ...args
+        sanitizedArgs
       );
+
+      if (hasCallbacks) {
+        this._dispatcher.addEventListener(
+          callbackEvent,
+          callbackListener as any
+        );
+      }
+
       this._dispatcher.once(responseEvent).then((response) => {
-        const { result, error } = response;
+        if (callbackListener) {
+          this._dispatcher.removeEventListener(
+            callbackEvent,
+            callbackListener as any
+          );
+        }
+
+        const { result, error } = response as ResponseMessage<any>;
+
         if (error !== undefined) {
           reject(error);
         } else {
@@ -99,7 +148,18 @@ export class ConcreteLocalHandle<
         return;
       }
 
-      Promise.resolve(method(...args))
+      const desanitizedArgs = args.map((arg) => {
+        if (isCallbackProxy(arg)) {
+          const { callbackId } = arg;
+          return (...args: any[]) => {
+            this._dispatcher.callbackToRemote(requestId, callbackId, args);
+          };
+        } else {
+          return arg;
+        }
+      });
+
+      Promise.resolve(method(...desanitizedArgs))
         .then(resolve)
         .catch(reject);
     });

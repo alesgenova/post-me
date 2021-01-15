@@ -20,6 +20,12 @@ type ChildMethods = {
   bar: () => Promise<{ status: number; message: string }>;
   throws: () => Promise<number>;
   ping: (s: string) => string;
+  slowSum: (
+    x: number,
+    y: number,
+    onStart: (start: number) => void,
+    onProgress: (progress: number) => void
+  ) => Promise<number>;
 };
 
 type ChildEvents = {
@@ -51,6 +57,26 @@ const childMethods: ChildMethods = {
   bar: () => Promise.resolve({ status: 200, message: 'ok' }),
   throws: () => Promise.reject(new Error('Oh no! - child')),
   ping: (s) => s,
+  slowSum: (x, y, onStart, onProgress) => {
+    console.log('ONSTART', onStart);
+    onStart(-1);
+    return new Promise((resolve) => {
+      const nIterations = 5;
+
+      const step = (iter: number) => {
+        if (iter >= nIterations) {
+          resolve(x + y);
+          return;
+        }
+
+        onProgress!(iter);
+
+        setTimeout(() => step(iter + 1), 10);
+      };
+
+      step(0);
+    });
+  },
 };
 
 function bindPostMessageToSource(target: Window, source: Window) {
@@ -102,16 +128,20 @@ function makeHandshake(
     makeWindows('https://parent.example.com', 'https://child.example.com');
   const [parentWindow, childWindow] = windows;
 
-  const parentMessenger = new WindowMessenger({
+  let parentMessenger = new WindowMessenger({
     localWindow: parentWindow,
     remoteWindow: childWindow,
     remoteOrigin: childWindow.origin,
   });
-  const childMessenger = new WindowMessenger({
+  let childMessenger = new WindowMessenger({
     localWindow: childWindow,
     remoteWindow: parentWindow,
     remoteOrigin: parentWindow.origin,
   });
+
+  // parentMessenger = DebugMessenger(parentMessenger, debug('post-me:parent'));
+  // childMessenger = DebugMessenger(childMessenger, debug('post-me:child'));
+
   const handshakes = [
     ParentHandshake(parentMessenger, parentMethods),
     ChildHandshake(childMessenger, childMethods),
@@ -769,5 +799,35 @@ test('worker', () => {
     });
 
     setTimeout(reject, 1000);
+  });
+});
+
+test('callback', () => {
+  return new Promise<void>((resolve) => {
+    makeHandshake().then(([parentConnection, _childConnection]) => {
+      // Code in the parent app
+      {
+        const remoteHandle = parentConnection.remoteHandle();
+
+        const onStart = jest.fn();
+        const onProgress = jest.fn();
+
+        remoteHandle
+          .call('slowSum', 3, 4, onStart, onProgress)
+          .then(async (value) => {
+            expect(value).toEqual(7);
+            expect(onStart).toHaveBeenCalledWith(-1);
+            expect(onStart).toHaveBeenCalledTimes(1);
+            expect(onProgress).toHaveBeenCalledWith(0);
+            expect(onProgress).toHaveBeenCalledWith(1);
+            expect(onProgress).toHaveBeenCalledWith(2);
+            expect(onProgress).toHaveBeenCalledWith(3);
+            expect(onProgress).toHaveBeenCalledWith(4);
+            expect(onProgress).toHaveBeenCalledTimes(5);
+            resolve();
+            return value;
+          });
+      }
+    });
   });
 });

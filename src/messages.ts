@@ -1,6 +1,4 @@
-import { IdType, KeyType } from './common';
-
-const MARKER = '@post-me';
+import { IdType, KeyType, MARKER } from './common';
 
 export enum MessageType {
   HandshakeRequest = 'handshake-request',
@@ -9,6 +7,7 @@ export enum MessageType {
   Response = 'response',
   Error = 'error',
   Event = 'event',
+  Callback = 'callback',
 }
 
 export interface Message<T extends MessageType> {
@@ -34,6 +33,13 @@ export interface ResponseMessage<R> extends Message<MessageType.Response> {
   requestId: IdType;
   result?: R;
   error?: string;
+}
+
+export interface CallbackMessage<A extends Array<any>>
+  extends Message<MessageType.Callback> {
+  requestId: IdType;
+  callbackId: IdType;
+  args: A;
 }
 
 export interface EventMessage<P> extends Message<MessageType.Event> {
@@ -67,7 +73,7 @@ export function createCallMessage<A extends Array<any>>(
   sessionId: IdType,
   requestId: IdType,
   methodName: KeyType,
-  ...args: A
+  args: A
 ): CallMessage<A> {
   return {
     type: MARKER,
@@ -101,6 +107,22 @@ export function createResponsMessage<R>(
   }
 
   return message;
+}
+
+export function createCallbackMessage<A extends Array<any>>(
+  sessionId: IdType,
+  requestId: IdType,
+  callbackId: IdType,
+  args: A
+): CallbackMessage<A> {
+  return {
+    type: MARKER,
+    action: MessageType.Callback,
+    sessionId,
+    requestId,
+    callbackId,
+    args,
+  };
 }
 
 export function createEventMessage<P>(
@@ -141,6 +163,10 @@ export function isCallMessage(m: Message<any>): m is CallMessage<any[]> {
 
 export function isResponseMessage(m: Message<any>): m is ResponseMessage<any> {
   return isMessage(m) && m.action === MessageType.Response;
+}
+
+export function isCallbackMessage(m: Message<any>): m is CallbackMessage<any> {
+  return isMessage(m) && m.action === MessageType.Callback;
 }
 
 export function isEventMessage(m: Message<any>): m is EventMessage<any> {

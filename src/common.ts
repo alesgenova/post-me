@@ -1,3 +1,5 @@
+export const MARKER = '@post-me';
+
 export type IdType = number;
 export type KeyType = string;
 
