@@ -13,6 +13,7 @@ With __post-me__ it is easy for a parent (for example the main app) and a child 
 Main features:
 - Parent and child can both expose methods and/or events.
 - Strong typing of method names, arguments, return values, as well as event names and payloads.
+- Seamlessly pass callbacks to the other context to get progress or partial results.
 - Establish multiple concurrent connections.
 - Easily extensible to more use cases.
 - No dependencies: 2kb gzip bundle.
@@ -23,102 +24,55 @@ Main features:
 In this [live demo](https://alesgenova.github.io/post-me/) a parent window achieves two-way communication with its 5 children (4 iframes and 1 web worker).
 
 ## Usage
-To establish a connection between two windows follow the steps below:
-  - Create a `Messenger`, an object implementing the low level communication (`WindowMessenger` and `WorkerMessenger` already provided).
-  - Initiate a handshake between the parent window and the child window by calling the `ParentHandshake()` and `ChildHandshake()` methods respectively.
-  - The `methods` parameter contains the methods that each window will expose to the other.
-  - The handshake returns a `Promise<Connection>` to the two windows.
-  - Get a handle to the other window by calling the `connection.getRemoteHandle()` method.
-    - Use `remoteHandle.call(methodName, ...args)` to call methods on the other window. It returns a `Promise` of the result.
-    - Use `remoteHandle.addEventListener(eventName, callback)` to listen to specific events dispatched by the other window.
-    - Use `remoteHandle.removeEventListener(eventName, callback)` to remove listeners.
-  - Get a handle to the local window by calling the `connection.getLocalHandle()` method.
-    - Use `localHandle.emit(eventName, payload)` to emit a specific event with the given payload.
+In the example below, the parent application calls methods exposed by the worker and listens to events emitted by it.
 
-Refer to the code snippet below as an example of these steps.
+For the sake of simiplicity, only the worker is expositng methods and events, but the parent application could just as well expose methods and events.
 
-### Parent code
+Parent code:
 ```typescript
-import { ParentHandshake, WindowMessenger } from 'post-me';
+import { ParentHandshake, WorkerMessenger } from 'post-me';
 
-// Create the child window any way you like (iframe here, but could be popup or tab too)
-const childFrame = document.createElement('iframe');
-childFrame.src = './child.html';
-const childWindow = childFrame.contentWindow;
+const worker = new Worker('./worker.js');
 
-// Define the methods you want to expose to the other window.
-// Methods can either return values or Promises
-const methods = {
-  foo: (s, x) => s.length * x,
-  bar: (x) => Promise.resolve(x * 2),
-}
+const messenger = new WorkerMessenger({ worker });
 
-// Start the handshake
-// For safety it is strongly adviced to pass the explicit child origin instead of '*'
-const messenger = new WindowMessenger({
-  remoteWindow: childWindow,
-  remoteOrigin: '*'
+ParentHandshake(messenger).then((connection) => {
+  const remoteHandle = connection.remoteHandle();
+
+  // Call methods on the worker and get the result as a promise
+  remoteHandle.call('sum', 3, 4).then((result) => {
+    console.log(result); // 7
+  });
+
+  // Listen for a specific custom event from the worker
+  remoteHandle.addEventListener('ping', (payload) => {
+    console.log(payload) // 'Oh, hi!'
+  });
 });
-ParentHandshake(messenger, methods)
-  .then((connection) => {
-    const localHandle = connection.localHandle();
-    const remoteHandle = connection.remoteHandle();
-
-    // Call a method on the child
-    remoteHandle.call('baz', 3)
-      .then((value) => {
-        console.log(value); // 9
-      })
-
-    // Listen for an event emitted by the child
-    remoteHandle.addEventListener('some-child-event', (payload) => {
-      console.log(payload) // 'Hi from child'
-    });
-
-    // Emit an evevent
-    localHandle.emit('some-parent-event', 'Hi from parent');
-  })
 ```
 
-### Child code
+Worker code:
 ```typescript
-import { ChildHandshake, WindowMessenger } from 'post-me';
+import { ChildHandshake, WorkerMessenger } from 'post-me';
 
-// Define the methods you want to expose to the other window.
-// Methods can either return values or Promises
+// Methods exposed by the worker: each function can either return a value or a Promise.
 const methods = {
-  baz: (x) => x * 3,
+  sum: (x, y) => x + y,
+  mul: (x, y) => x * y
 }
 
-// Start the handshake
-// For safety it is strongly adviced to pass the explicit parent origin instead of '*'
-const messenger = new WindowMessenger({
-  remoteWindow: window.parent,
-  remoteOrigin: '*'
+const messenger = WorkerMessenger({worker: self});
+ChildHandshake(messenger, methods).then((connection) => {
+  const remoteHandle = connection.remoteHandle();
+
+  // Emit custom events to the app
+  localHandle.emit('ping',  'Oh, hi!');
 });
-const messenger = new WindowMessenger({ remoteOrigin: '*' });
-ChildHandshake(messenger, methods)
-  .then((connection) => {
-    const localHandle = connection.localHandle();
-    const remoteHandle = connection.remoteHandle();
-
-    // Call a method on the parent
-    remoteHandle.call('foo', 'ciao', 2)
-      .then((value) => {
-        console.log(value); // 8
-      })
-
-    // Listen for an event emitted by the child
-    remoteHandle.addEventListener('some-parent-event', (payload) => {
-      console.log(payload) // 'Hi from parent'
-    });
-
-    // Emit an evevent
-    localHandle.emit('some-child-event', 'Hi from child');
-  })
 ```
 
 ## Typescript
+Using typescript you can ensure that the parent and the child are using each other's methods and events correctly. Most coding mistakes will be caught during development by the typescript compiler.
+
 Thanks to __post-me__ extensive typescript support, the correctness of the following items can be statically checked during development:
 - Method names
 - Argument number and types
@@ -126,165 +80,151 @@ Thanks to __post-me__ extensive typescript support, the correctness of the follo
 - Event names
 - Event payload type
 
-Ideally methods and events types should be defined in a place accessible to the code of both parent and child, so that they can both import the same type definition. This way, it will be ensured that the contract between the parties will be enforced.
-
 Below a modified version of the previous example using typescript.
 
-### Common code
+Types code:
 ```typescript
-// common.ts
+// types.ts
 
-export type ParentMethods = {
-  foo: (s: string, x: number) => number;
-  bar: (x: number) => Promise<number>;
-};
-
-export type ParentEvents = {
-  'some-parent-event': string;
+export type WorkerMethods = {
+  sum: (x: number, y: number) => number;
+  mul: (x: number, y: number) => number;
 }
 
-export type ChildMethods = {
-  baz: (x: number) => number;
-};
-
-export type ChildEvents = {
-  'some-child-event': string;
+export type WorkerEvents = {
+  'ping': string;
 }
 ```
 
-### Parent code
+Parent Code:
 ```typescript
-import { ParentHandshake, WindowMessenger, LocalHandle, RemoteHandle } from 'post-me';
+import {
+ ParentHandshake, WorkerMessenger, RemoteHandle
+} from 'post-me';
 
-import { ParentMethods, ParentEvents, ChildMethods, ChildEvents} from '/path/to/common';
+import { WorkerMethods, WorkerEvents } from './types';
 
-// Create the child window any way you like (iframe here, but could be popup or tab too)
-const childFrame = document.createElement('iframe');
-childFrame.src = './child.html';
-const childWindow = childFrame.contentWindow;
-
-// Define the methods you want to expose to the other window.
-// Methods can either return values or Promises
-const methods: ParentMethods = {
-  foo: (s, x) => s.length * x,
-  bar: (x) => Promise.resolve(x * 2),
-}
-
-// Start the handshake
-// For safety it is strongly adviced to pass the explicit child origin instead of '*'
-const messenger = new WindowMessenger({
-  remoteWindow: childWindow,
-  remoteOrigin: '*'
-});
-ParentHandshake(messenger, methods)
-  .then((connection) => {
-    const localHandle: LocalHandle<ParentEvents> = connection.localHandle();
-    const remoteHandle: RemoteHandle<ChildMethods, ChildEvents> = connection.remoteHandle();
-
-    // Call a method on the child
-    remoteHandle.call('baz', 3)
-      .then((value) => {
-        console.log(value); // 9
-      })
-
-    // Listen for an event emitted by the child
-    remoteHandle.addEventListener('some-child-event', (payload) => {
-      console.log(payload) // 'Hi from child'
-    });
-
-    // Emit an evevent
-    localHandle.emit('some-parent-event', 'Hi from parent');
-  })
-```
-
-### Child code
-```typescript
-import { ChildHandshake, WindowMessenger, LocalHandle, RemoteHandle } from 'post-me';
-
-import { ParentMethods, ParentEvents, ChildMethods, ChildEvents} from '/path/to/common';
-
-// Define the methods you want to expose to the other window.
-// Methods can either return values or Promises
-const methods: ChildMethods = {
-  baz: (x) => x * 3,
-}
-
-// Start the handshake
-// For safety it is strongly adviced to pass the explicit parent origin instead of '*'
-const messenger = new WindowMessenger({
-  remoteWindow: window.parent,
-  remoteOrigin: '*'
-});
-ChildHandshake(messenger, methods)
-  .then((connection) => {
-    const localHandle: LocalHandle<ChildEvents> = connection.localHandle();
-    const remoteHandle: RemoteHandle<ParentMethods, ParentEvents> = connection.remoteHandle();
-
-    // Call a method on the parent
-    remoteHandle.call('foo', 'ciao', 2)
-      .then((value) => {
-        console.log(value); // 8
-      })
-
-    // Listen for an event emitted by the child
-    remoteHandle.addEventListener('some-parent-event', (payload) => {
-      console.log(payload) // 'Hi from parent'
-    });
-
-    // Emit an evevent
-    localHandle.emit('some-child-event', 'Hi from child');
-  })
-```
-
-## Workers
-A minimal example of using __post-me__ with a web worker can be found in the demo source code.
-  - Parent: [source](https://github.com/alesgenova/post-me/blob/main/demo/parent.js#L162-L165)
-  - Worker: [source](https://github.com/alesgenova/post-me/blob/main/demo/worker.js)
-
-### Parent code
-```typescript
-import { ParentHandshake, WorkerMessenger } from 'post-me';
-
-// Create a dedicated web worker.
 const worker = new Worker('./worker.js');
 
-// Start the handshake
 const messenger = new WorkerMessenger({ worker });
 
 ParentHandshake(messenger).then((connection) => {
-  const remoteHandle = connection.remoteHandle();
+  const remoteHandle: RemoteHandle<WorkerMethods, WorkerEvents>
+    = connection.remoteHandle();
 
-  // Call a method on the worker
-  remoteHandle.call('sum', 3, 4)
-    .then((value) => {
-      console.log(value); // 7
-    });
+  // Call methods on the worker and get the result as a Promise
+  remoteHandle.call('sum', 3, 4).then((result) => {
+    console.log(result); // 7
+  });
 
-  remoteHandle.call('mul', 3, 4)
-    .then((value) => {
-      console.log(value); // 12
-    });
-})
-```
+  // Listen for a specific custom event from the app
+  remoteHandle.addEventListener('ping', (payload) => {
+    console.log(payload) // 'Oh, hi!'
+  });
 
-### Worker code
-```typescript
-importScripts('./post-me.js');
-const PostMe = self['post-me'];
-
-const methods = {
-  sum: (x, y) => x + y,
-  mul: (x, y) => x * y,
-};
-
-const messenger = new PostMe.WorkerMessenger({ worker: self });
-PostMe.ChildHandshake(messenger, methods).then((_connection) => {
-  console.log('Worker successfully connected');
+  // The following lines have various mistakes that will be caught by the compiler
+  remoteHandle.call('mul', 3, 'four'); // Wrong argument type
+  remoteHandle.call('foo'); // 'foo' doesn't exist on WorkerMethods type
 });
 ```
 
+Worker code:
+```typescript
+import { ChildHandshake, WorkerMessenger, LocalHandle } from 'post-me';
+
+import { WorkerMethods, WorkerEvents } from './types';
+
+const methods: WorkerMethods = {
+  sum: (x: number, y: number) => x + y,
+  mul: (x: number, y: number) => x * y,
+}
+
+const messenger = WorkerMessenger({worker: self});
+ChildHandshake(messenger, methods).then((connection) => {
+  const localHandle: LocalHandle<WorkerEvents>
+    = connection.localHandle();
+
+  // Emit custom events to the worker
+  localHandle.emit('ping',  'Oh, hi!');
+});
+```
+
+## Other Windows
+post-me can establish the same level of bidirectional communications not only with workers but with other windows too (e.g. iframes).
+
+Internally, the low level differences between communicating with a `Worker` or a `Window` have been abstracted, and the `Handshake` will accept any object that implements the `Messenger` interface defined by post-me.
+
+This approach makes it easy for post-me to be extended by its users.
+
+A `Messenger` implementation for communicating between window is already provided in the library (`WindowMessenger`).
+
+Here is an example of using post-me to communicate with an iframe.
+
+Parent code:
+```typescript
+import { ParentHandshake, WindowMessenger } from 'post-me';
+
+// For safety it is strongly adviced to pass the explicit child origin instead of '*'
+const messenger = new WindowMessenger({
+  localWindow: window,
+  remoteWindow: childWindow,
+  remoteOrigin: '*'
+});
+
+ParentHandshake(messenger).then((connection) => {/* ... */});
+```
+
+Child code:
+```typescript
+import { ChildHandshake, WindowMessenger } from 'post-me';
+
+// For safety it is strongly adviced to pass the explicit child origin instead of '*'
+const messenger = new WindowMessenger({
+  localWindow: window,
+  remoteWindow: window.parent,
+  remoteOrigin: '*'
+});
+
+ChildHandshake(messenger).then((connection) => {/* ... */});
+```
+
+## Callbacks as call parameters
+Even though functions cannot actually be shared across contexts, with a little magic under the hood __post-me__ let's you pass callback functions as arguments when calling a method on the other worker/window.
+
+Passing callbacks can be useful to obtain progress or partial results from a long running task.
+
+Parent code:
+```typescript
+//...
+ParentHandshake(messenger).then(connection => {
+  const remoteHandle = connection.remoteHandle();
+
+  const onProgress = (progress) => {
+    console.log(progress); // 0.25, 0.5, 0.75
+  }
+
+  remoteHandle.call("slowSum", 2, 3, onProgress).then(result => {
+    console.log(result); // 5
+  });
+});
+```
+
+Worker code:
+```typescript
+const methods = {
+  slowSum: (x, y, onProgress) => {
+    onProgress(0.25);
+    onProgress(0.5);
+    onProgress(0.75);
+
+    return x + y;
+}
+// ...
+ChildHandshake(messenger, methods).then(connection => {/* */})
+```
+
 ## Debugging
-__post-me__ provides facilities to inspect each low level message exchanged between the two ends.
+You can optionally output the internal low-level messages exchanged between the two ends.
 
 To enable debugging, simply decorate any `Messenger` instance with the provided `DebugMessenger` decorator.
 
