@@ -141,7 +141,7 @@ const methods: WorkerMethods = {
 
 const messenger = WorkerMessenger({worker: self});
 ChildHandshake(messenger, methods).then((connection) => {
-  const localHandle: LocalHandle<WorkerEvents>
+  const localHandle: LocalHandle<WorkerMethods, WorkerEvents>
     = connection.localHandle();
 
   // Emit custom events to the worker
@@ -227,6 +227,63 @@ const methods = {
 ChildHandshake(messenger, methods).then(connection => {/* */})
 ```
 
+## Transfer vs Clone
+By default any call parameter, return value, and event payload is cloned when passed to the other context.
+
+While in most cases this doesn't have a significant impact on performance, sometimes you might need to transfer an object instead of cloning it. NOTE: only `Transferable` objects can be transfered (`ArrayBuffer`, `MessagePort`, `ImageBitmap`, `OffscreenCanvas`).
+
+__post-me__ provides a way to optionally transfer objects that are part of a method call, return value, or event payload.
+
+In the example below, the parent passes a very large array to a worker, the worker modifies the array in place, and returns it to the parent. Transfering the array instead of cloning it twice can save significant amounts of time.
+
+Parent code:
+```typescript
+// ...
+
+ParentHandshake(messenger).then((connection) => {
+  const remoteHandle = connection.remoteHandle();
+
+  // Transfer the the buffer of the array parameter of every call that will be made to 'fillArray'
+  remoteHandle.setCallTransfer('fillArray', (array, value) => [array.buffer]);
+  {
+    const array = new Float64Array(100000000);
+    remoteHandle.call('fillArray', array, 5);
+  }
+
+  // Transfer the buffer of the array parameter only for this one call made to 'scaleArray'
+  {
+    const array = new Float64Array(100000000);
+    const args = [array, 2];
+    const callOptions = { transfer: [array.buffer] };
+    remoteHandle.customCall('scaleArray', args, callOptions);
+  }
+});
+```
+
+Worker code:
+```typescript
+// ...
+
+const methods = {
+  fillArray: (array, value) => {
+    array.forEach((_, i) => {array[i] = value});
+    return array;
+  },
+  scaleArray: (buffer, type value) => {
+    array.forEach((a, i) => {array[i] = a * value});
+    return array;
+  }
+}
+
+ChildHandshake(messenger, model).then((connection) => {
+  const localHandle = connection.localHandle();
+
+  // For each method, declare which parts of the return value should be transferred instead of cloned.
+  localHandle.setReturnTransfer('fillArray', (result) => [result.buffer]);
+  localHandle.setReturnTransfer('scaleArray', (result) => [result.buffer]);
+});
+```
+
 ## Debugging
 You can optionally output the internal low-level messages exchanged between the two ends.
 
@@ -234,7 +291,6 @@ To enable debugging, simply decorate any `Messenger` instance with the provided 
 
 You can optionally pass to the decorator your own logging function (a glorified `console.log` by default), which can be useful to make the output more readable, or to inspect messages in automated tests.
 
-### Example
 ```typescript
 import { ParentHandshake, WindowMessenger, DebugMessenger } from 'post-me';
 
@@ -254,7 +310,6 @@ messenger = DebugMessenger(messenger, log);
 ParentHandshake(messenger).then((connection) => {
   // ...
 });
-
 ```
 
 ### Output
