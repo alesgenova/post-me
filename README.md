@@ -21,16 +21,37 @@ With __post-me__ it is easy for a parent (for example the main app) and a child 
 - 👐 Open source (MIT)
 
 ## Demo
-In this [live demo](https://alesgenova.github.io/post-me/) a parent window communicates with 1 web worker and 4 iframes.
+In this [live demo](https://alesgenova.github.io/post-me-demo) the main window communicates with a web worker and an iframe ([source](https://github.com/alesgenova/post-me-demo)).
 
 ## Content:
-1. [Basic Usage](#usage)
-2. [Typescript Support](#typescript)
-3. [Other Windows](#windows)
-4. [Callbacks as parameters](#callbacks)
-5. [Transfer vs Clone](#transfer)
-6. [Debugging](#debugging)
-7. [References](#references)
+1. [Install](#install)
+2. [Basic Usage](#usage)
+3. [Typescript Support](#typescript)
+4. [Other Windows](#windows)
+5. [Callbacks as parameters](#callbacks)
+6. [Transfer vs Clone](#transfer)
+7. [Debugging](#debugging)
+8. [References](#references)
+
+<a id="install"></a>
+
+## Install
+Import __post-me__ as a module:
+```bash
+npm install post-me
+```
+```typescript
+import { ParentHandshake } from 'post-me';
+```
+
+Import __post-me__ as a script:
+```html
+<script src="https://unpkg.com/post-me/dist/index.min.js"></script>
+
+<script>
+  const ParentHandshake = PostMe.ParentHandshake;
+</script>
+```
 
 <a id="usage"></a>
 
