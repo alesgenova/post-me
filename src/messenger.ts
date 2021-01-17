@@ -2,7 +2,7 @@ type MessageListener = (event: MessageEvent) => void;
 type ListenerRemover = () => void;
 
 export interface Messenger {
-  postMessage: (message: any) => void;
+  postMessage: (message: any, transfer?: Transferable[]) => void;
   addMessageListener: (listener: MessageListener) => ListenerRemover;
 }
 
@@ -25,7 +25,7 @@ const acceptableMessageEvent = (
 };
 
 export class WindowMessenger implements Messenger {
-  postMessage: (message: any) => void;
+  postMessage: (message: any, transfer?: Transferable[]) => void;
   addMessageListener: (listener: MessageListener) => ListenerRemover;
 
   constructor({
@@ -39,8 +39,8 @@ export class WindowMessenger implements Messenger {
   }) {
     localWindow = localWindow || window;
 
-    this.postMessage = (message) => {
-      remoteWindow.postMessage(message, remoteOrigin);
+    this.postMessage = (message, transfer) => {
+      remoteWindow.postMessage(message, remoteOrigin, transfer);
     };
 
     this.addMessageListener = (listener) => {
@@ -62,12 +62,12 @@ export class WindowMessenger implements Messenger {
 }
 
 export class WorkerMessenger implements Messenger {
-  postMessage: (message: any) => void;
+  postMessage: (message: any, transfer?: Transferable[]) => void;
   addMessageListener: (listener: MessageListener) => ListenerRemover;
 
   constructor({ worker }: { worker: Worker }) {
-    this.postMessage = (message) => {
-      worker.postMessage(message);
+    this.postMessage = (message, transfer = []) => {
+      worker.postMessage(message, transfer);
     };
 
     this.addMessageListener = (listener) => {

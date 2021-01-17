@@ -3,6 +3,14 @@ export const MARKER = '@post-me';
 export type IdType = number;
 export type KeyType = string;
 
+export type CallOptions = {
+  transfer?: Transferable[];
+};
+
+export type EmitOptions = {
+  transfer?: Transferable[];
+};
+
 export type MethodsType = Record<KeyType, Callable<any[], ValueOrPromise<any>>>;
 
 export type EventsType = Record<KeyType, any>;
