@@ -1,4 +1,5 @@
 import typescript from '@rollup/plugin-typescript';
+import babel from '@rollup/plugin-babel';
 
 export default [
   {
@@ -12,14 +13,16 @@ export default [
     plugins: [typescript({ target: 'esnext', module: 'esnext', declaration: false })]
   },
   {
-    input: 'src/index.ts',
+    input: 'dist/index.esm.js',
     output: [
       {
-        name: 'post-me',
+        name: 'PostMe',
         file: 'dist/index.js',
         format: 'umd'
       }
     ],
-    plugins: [typescript({ target: 'es5', declaration: false })]
+    plugins: [
+      babel({ presets: ['@babel/preset-env'], babelHelpers: 'inline' }),
+    ]
   }
 ]
