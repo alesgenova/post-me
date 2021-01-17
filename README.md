@@ -26,7 +26,7 @@ In this [live demo](https://alesgenova.github.io/post-me/) a parent window achie
 ## Usage
 In the example below, the parent application calls methods exposed by the worker and listens to events emitted by it.
 
-For the sake of simiplicity, only the worker is expositng methods and events, but the parent application could just as well expose methods and events.
+For the sake of simiplicity, only the worker is exposing methods and events, however the parent could do it as well.
 
 Parent code:
 ```typescript
@@ -63,7 +63,7 @@ const methods = {
 
 const messenger = WorkerMessenger({worker: self});
 ChildHandshake(messenger, methods).then((connection) => {
-  const remoteHandle = connection.remoteHandle();
+  const localHandle = connection.localHandle();
 
   // Emit custom events to the app
   localHandle.emit('ping',  'Oh, hi!');
@@ -163,6 +163,10 @@ Here is an example of using post-me to communicate with an iframe.
 Parent code:
 ```typescript
 import { ParentHandshake, WindowMessenger } from 'post-me';
+
+// Create the child window any way you like (iframe here, but could be popup or tab too)
+const childFrame = document.createElement('iframe');
+const childWindow = childFrame.contentWindow;
 
 // For safety it is strongly adviced to pass the explicit child origin instead of '*'
 const messenger = new WindowMessenger({
