@@ -83,7 +83,7 @@ export class Dispatcher extends Emitter<DispatcherEvents> {
     }
   }
 
-  callOnRemote(methodName: KeyType, args: any[]) {
+  callOnRemote(methodName: KeyType, args: any[], transfer?: Transferable[]) {
     const requestId = this.uniqueId();
     const callbackEvent = makeCallbackEvent(requestId);
     const responseEvent = makeResponseEvent(requestId);
@@ -93,19 +93,24 @@ export class Dispatcher extends Emitter<DispatcherEvents> {
       methodName,
       args
     );
-    this.messenger.postMessage(message);
+    this.messenger.postMessage(message, transfer);
 
     return { callbackEvent, responseEvent };
   }
 
-  respondToRemote(requestId: IdType, value: any, error?: any) {
+  respondToRemote(
+    requestId: IdType,
+    value: any,
+    error: any,
+    transfer?: Transferable[]
+  ) {
     const message = createResponsMessage(
       this.sessionId,
       requestId,
       value,
       error
     );
-    this.messenger.postMessage(message);
+    this.messenger.postMessage(message, transfer);
   }
 
   callbackToRemote(requestId: IdType, callbackId: IdType, args: any[]) {
@@ -118,9 +123,9 @@ export class Dispatcher extends Emitter<DispatcherEvents> {
     this.messenger.postMessage(message);
   }
 
-  emitToRemote(eventName: KeyType, payload: any) {
+  emitToRemote(eventName: KeyType, payload: any, transfer?: Transferable[]) {
     const message = createEventMessage(this.sessionId, eventName, payload);
-    this.messenger.postMessage(message);
+    this.messenger.postMessage(message, transfer);
   }
 
   close() {

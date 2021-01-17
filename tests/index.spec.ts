@@ -119,8 +119,8 @@ function makeHandshake(
   _windows?: [Window, Window]
 ): Promise<
   [
-    Connection<ParentEvents, ChildMethods, ChildEvents>,
-    Connection<ChildEvents, ParentMethods, ParentEvents>
+    Connection<ParentMethods, ParentEvents, ChildMethods, ChildEvents>,
+    Connection<ChildMethods, ChildEvents, ParentMethods, ParentEvents>
   ]
 > {
   let windows =

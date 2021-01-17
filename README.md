@@ -10,18 +10,29 @@
 
 With __post-me__ it is easy for a parent (for example the main app) and a child (for example a worker or an iframe) to expose methods and custom events to each other.
 
-Main features:
-- Parent and child can both expose methods and/or events.
-- Strong typing of method names, arguments, return values, as well as event names and payloads.
-- Seamlessly pass callbacks to the other context to get progress or partial results.
-- Establish multiple concurrent connections.
-- Easily extensible to more use cases.
-- No dependencies: 2kb gzip bundle.
-- Excellent test coverage.
-- Open source (MIT)
+## Features
+- 🔁 Parent and child can both __expose__ __methods__ and/or __events__.
+- 🔎 __Strong typing__ of method names, arguments, return values, as well as event names and payloads.
+- 🤙 Seamlessly pass __callbacks__ to the other context to get progress or partial results.
+- 📨 __Transfer__ arguments/return values/payloads when needed instead of cloning.
+- 🔗 Establish __multiple__ concurrent __connections__.
+- 🌱 __No dependencies__: 2kb gzip bundle.
+- 🧪 Excellent __test coverage__.
+- 👐 Open source (MIT)
 
 ## Demo
-In this [live demo](https://alesgenova.github.io/post-me/) a parent window achieves two-way communication with its 5 children (4 iframes and 1 web worker).
+In this [live demo](https://alesgenova.github.io/post-me/) a parent window communicates with 1 web worker and 4 iframes.
+
+## Content:
+1. [Basic Usage](#usage)
+2. [Typescript Support](#typescript)
+3. [Other Windows](#windows)
+4. [Callbacks as parameters](#callbacks)
+5. [Transfer vs Clone](#transfer)
+6. [Debugging](#debugging)
+7. [References](#references)
+
+<a id="usage"></a>
 
 ## Usage
 In the example below, the parent application calls methods exposed by the worker and listens to events emitted by it.
@@ -69,6 +80,8 @@ ChildHandshake(messenger, methods).then((connection) => {
   localHandle.emit('ping',  'Oh, hi!');
 });
 ```
+
+<a id="typescript"></a>
 
 ## Typescript
 Using typescript you can ensure that the parent and the child are using each other's methods and events correctly. Most coding mistakes will be caught during development by the typescript compiler.
@@ -141,13 +154,15 @@ const methods: WorkerMethods = {
 
 const messenger = WorkerMessenger({worker: self});
 ChildHandshake(messenger, methods).then((connection) => {
-  const localHandle: LocalHandle<WorkerEvents>
+  const localHandle: LocalHandle<WorkerMethods, WorkerEvents>
     = connection.localHandle();
 
   // Emit custom events to the worker
   localHandle.emit('ping',  'Oh, hi!');
 });
 ```
+
+<a id="windows"></a>
 
 ## Other Windows
 post-me can establish the same level of bidirectional communications not only with workers but with other windows too (e.g. iframes).
@@ -192,6 +207,8 @@ const messenger = new WindowMessenger({
 ChildHandshake(messenger).then((connection) => {/* ... */});
 ```
 
+<a id="callbacks"></a>
+
 ## Callbacks as call parameters
 Even though functions cannot actually be shared across contexts, with a little magic under the hood __post-me__ let's you pass callback functions as arguments when calling a method on the other worker/window.
 
@@ -227,6 +244,67 @@ const methods = {
 ChildHandshake(messenger, methods).then(connection => {/* */})
 ```
 
+<a id="transfer"></a>
+
+## Transfer vs Clone
+By default any call parameter, return value, and event payload is cloned when passed to the other context.
+
+While in most cases this doesn't have a significant impact on performance, sometimes you might need to transfer an object instead of cloning it. NOTE: only `Transferable` objects can be transfered (`ArrayBuffer`, `MessagePort`, `ImageBitmap`, `OffscreenCanvas`).
+
+__post-me__ provides a way to optionally transfer objects that are part of a method call, return value, or event payload.
+
+In the example below, the parent passes a very large array to a worker, the worker modifies the array in place, and returns it to the parent. Transfering the array instead of cloning it twice can save significant amounts of time.
+
+Parent code:
+```typescript
+// ...
+
+ParentHandshake(messenger).then((connection) => {
+  const remoteHandle = connection.remoteHandle();
+
+  // Transfer the the buffer of the array parameter of every call that will be made to 'fillArray'
+  remoteHandle.setCallTransfer('fillArray', (array, value) => [array.buffer]);
+  {
+    const array = new Float64Array(100000000);
+    remoteHandle.call('fillArray', array, 5);
+  }
+
+  // Transfer the buffer of the array parameter only for this one call made to 'scaleArray'
+  {
+    const array = new Float64Array(100000000);
+    const args = [array, 2];
+    const callOptions = { transfer: [array.buffer] };
+    remoteHandle.customCall('scaleArray', args, callOptions);
+  }
+});
+```
+
+Worker code:
+```typescript
+// ...
+
+const methods = {
+  fillArray: (array, value) => {
+    array.forEach((_, i) => {array[i] = value});
+    return array;
+  },
+  scaleArray: (buffer, type value) => {
+    array.forEach((a, i) => {array[i] = a * value});
+    return array;
+  }
+}
+
+ChildHandshake(messenger, model).then((connection) => {
+  const localHandle = connection.localHandle();
+
+  // For each method, declare which parts of the return value should be transferred instead of cloned.
+  localHandle.setReturnTransfer('fillArray', (result) => [result.buffer]);
+  localHandle.setReturnTransfer('scaleArray', (result) => [result.buffer]);
+});
+```
+
+<a id="debugging"></a>
+
 ## Debugging
 You can optionally output the internal low-level messages exchanged between the two ends.
 
@@ -234,7 +312,6 @@ To enable debugging, simply decorate any `Messenger` instance with the provided 
 
 You can optionally pass to the decorator your own logging function (a glorified `console.log` by default), which can be useful to make the output more readable, or to inspect messages in automated tests.
 
-### Example
 ```typescript
 import { ParentHandshake, WindowMessenger, DebugMessenger } from 'post-me';
 
@@ -254,11 +331,12 @@ messenger = DebugMessenger(messenger, log);
 ParentHandshake(messenger).then((connection) => {
   // ...
 });
-
 ```
 
-### Output
+Output:
 ![debug output](debug.png)
+
+<a id="references"></a>
 
 ## References
 The __post-me__ API is loosely inspired by [postmate](https://github.com/dollarshaveclub/postmate), with several major improvements and fixes to outstanding issues:

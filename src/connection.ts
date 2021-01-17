@@ -8,11 +8,12 @@ import {
 } from './handles';
 
 export interface Connection<
-  E0 extends EventsType = EventsType,
-  M1 extends MethodsType = MethodsType,
-  E1 extends EventsType = EventsType
+  M0 extends MethodsType = any,
+  E0 extends EventsType = any,
+  M1 extends MethodsType = any,
+  E1 extends EventsType = any
 > {
-  localHandle: () => LocalHandle<E0>;
+  localHandle: () => LocalHandle<M0, E0>;
   remoteHandle: () => RemoteHandle<M1, E1>;
   close: () => void;
 }
