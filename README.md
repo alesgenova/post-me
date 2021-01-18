@@ -283,7 +283,7 @@ Parent code:
 ParentHandshake(messenger).then((connection) => {
   const remoteHandle = connection.remoteHandle();
 
-  // Transfer the the buffer of the array parameter of every call that will be made to 'fillArray'
+  // Transfer the buffer of the array parameter of every call that will be made to 'fillArray'
   remoteHandle.setCallTransfer('fillArray', (array, value) => [array.buffer]);
   {
     const array = new Float64Array(100000000);
