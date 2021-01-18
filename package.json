@@ -1,13 +1,27 @@
 {
   "name": "post-me",
-  "version": "0.3.2",
-  "description": "A library to facilitate communication between windows (iframe, worker, popup, ...)",
+  "version": "0.4.0",
+  "description": "Communicate with web Workers and other Windows using a simple Promise based API",
+  "author": {
+    "name": "Alessandro Genova",
+    "email": "ales.genova@gmail.com",
+    "url": "https://github.com/alesgenova"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/alesgenova/post-me",
+  "repository": "github:alesgenova/post-me",
+  "bugs": {
+    "url": "https://github.com/alesgenova/post-me/issues",
+    "email": "ales.genova@gmail.com"
+  },
   "main": "dist/index.js",
+  "browser": "dist/index.min.js",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist"
   ],
+  "sideEffects": false,
   "scripts": {
     "build": "rollup -c && uglifyjs dist/index.js -o dist/index.min.js && tsc --emitDeclarationOnly",
     "build:demo": "npm run build && node scripts/build-demo.js www",
@@ -21,19 +35,11 @@
     "prettier:check-all": "prettier --check '**/*.{js,jsx,ts,tsx,css,html}'",
     "prettier:write-all": "prettier --write '**/*.{js,jsx,ts,tsx,css,html}'"
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "yarn prettier:write-staged"
-    }
-  },
-  "author": "Alessandro Genova",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/alesgenova/post-me.git"
-  },
-  "homepage": "https://github.com/alesgenova/post-me",
+  "dependencies": {},
   "devDependencies": {
+    "@babel/core": "^7.11.6",
+    "@babel/preset-env": "^7.12.11",
+    "@rollup/plugin-babel": "^5.2.2",
     "@rollup/plugin-typescript": "^8.1.0",
     "@types/jest": "^26.0.15",
     "@types/jsdom": "^16.2.5",
@@ -49,6 +55,11 @@
     "typescript": "^4.1.3",
     "uglify-js": "^3.12.4"
   },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run prettier:write-staged"
+    }
+  },
   "publishConfig": {
     "access": "public"
   },
@@ -57,7 +68,14 @@
     "postmessage",
     "iframe",
     "worker",
-    "webworker",
+    "workers",
+    "web-worker",
+    "web-workers",
+    "concurrency",
+    "parallel-computing",
+    "front-end",
+    "back-end",
+    "promise",
     "typescript",
     "postmate"
   ]

@@ -1,8 +1,7 @@
 importScripts('https://unpkg.com/debug-browser/dist/index.js');
 importScripts('./post-me.js');
 
-const postMe = self['post-me'];
-const debug = self['debug'];
+const { WorkerMessenger, DebugMessenger, ChildHandshake } = PostMe;
 
 debug.enable('post-me:worker');
 
@@ -12,6 +11,6 @@ const methods = {
 };
 
 const log = debug('post-me:worker');
-let messenger = new postMe.WorkerMessenger({ worker: self });
-messenger = postMe.DebugMessenger(messenger, log);
-postMe.ChildHandshake(messenger, methods).then((_connection) => {});
+let messenger = new WorkerMessenger({ worker: self });
+messenger = DebugMessenger(messenger, log);
+ChildHandshake(messenger, methods).then((_connection) => {});
