@@ -1,11 +1,16 @@
-importScripts('./post-me.umd.js');
-const PostMe = self['post-me'];
+importScripts('https://unpkg.com/debug-browser/dist/index.js');
+importScripts('./post-me.js');
+
+const { WorkerMessenger, DebugMessenger, ChildHandshake } = PostMe;
+
+debug.enable('post-me:worker');
 
 const methods = {
   sum: (x, y) => x + y,
   mul: (x, y) => x * y,
 };
 
-PostMe.ChildHandshake(methods, '*', self).then((_connection) => {
-  console.log('Worker successfully connected');
-});
+const log = debug('post-me:worker');
+let messenger = new WorkerMessenger({ worker: self });
+messenger = DebugMessenger(messenger, log);
+ChildHandshake(messenger, methods).then((_connection) => {});

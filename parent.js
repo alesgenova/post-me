@@ -1,4 +1,13 @@
-import { ParentHandshake } from './post-me.esm.js';
+import {
+  ParentHandshake,
+  WindowMessenger,
+  WorkerMessenger,
+  DebugMessenger,
+} from './post-me.esm.js';
+
+debug.enable(
+  'post-me:parent0,post-me:parent1,post-me:parent2,post-me:parent3,post-me:parentW'
+);
 
 let title = 'Parent';
 let color = '#eeeeee';
@@ -46,6 +55,7 @@ const createChildWindow = (i) => {
   return new Promise((resolve) => {
     const childContainer = document.getElementById(`child${i}-container`);
     const childFrame = document.createElement('iframe');
+    childFrame.name = `child${i}`;
     childFrame.src = './child.html';
     childFrame.width = '100%';
     childFrame.height = '100%';
@@ -57,17 +67,15 @@ const createChildWindow = (i) => {
   });
 };
 
-// const createChildWindow = (i) => {
-//   return new Promise((resolve) => {
-//     const childWindow = window.open('./child.html', '_blank');
-//     childWindow.onload = () => {
-//       resolve(childWindow);
-//     }
-//   })
-// }
-
 const makeHandshake = (i, childWindow) => {
-  return ParentHandshake(methods, childWindow, childWindow.origin);
+  const log = debug(`post-me:parent${i}`);
+  let messenger = new WindowMessenger({
+    localWindow: window,
+    remoteWindow: childWindow,
+    remoteOrigin: '*',
+  });
+  messenger = DebugMessenger(messenger, log);
+  return ParentHandshake(messenger, methods);
 };
 
 const createChildControls = (i, controlsContainer, connection) => {
@@ -160,8 +168,11 @@ children.forEach((i) => initChild(i));
 // Create the worker
 {
   const worker = new Worker('./worker.js');
+  const log = debug('post-me:parentW');
+  let messenger = new WorkerMessenger({ worker });
+  messenger = DebugMessenger(messenger, log);
 
-  ParentHandshake(window.origin, worker, {}).then((connection) => {
+  ParentHandshake(messenger, {}).then((connection) => {
     const remoteHandle = connection.remoteHandle();
 
     const title = document.createElement('h4');
