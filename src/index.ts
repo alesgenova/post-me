@@ -4,6 +4,8 @@ import {
   Messenger,
   WindowMessenger,
   WorkerMessenger,
+  PortMessenger,
+  BareMessenger,
   DebugMessenger,
   debug,
 } from './messenger';
@@ -18,6 +20,8 @@ export {
   Messenger,
   WindowMessenger,
   WorkerMessenger,
+  PortMessenger,
+  BareMessenger,
   DebugMessenger,
   debug,
 };

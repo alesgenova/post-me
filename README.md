@@ -27,7 +27,9 @@ In this [live demo](https://alesgenova.github.io/post-me-demo) the main window c
 1. [Install](#install)
 2. [Basic Usage](#usage)
 3. [Typescript Support](#typescript)
-4. [Other Windows](#windows)
+4. [Other Uses](#other)
+    - [Windows](#windows)
+    - [MessageChannels](#channels)
 5. [Callbacks as parameters](#callbacks)
 6. [Transfer vs Clone](#transfer)
 7. [Debugging](#debugging)
@@ -183,17 +185,20 @@ ChildHandshake(messenger, methods).then((connection) => {
 });
 ```
 
-<a id="windows"></a>
+<a id="other"></a>
 
-## Other Windows
-post-me can establish the same level of bidirectional communications not only with workers but with other windows too (e.g. iframes).
+## Other Uses
+post-me can establish the same level of bidirectional communications not only with workers but with other windows too (e.g. iframes) and message channels.
 
-Internally, the low level differences between communicating with a `Worker` or a `Window` have been abstracted, and the `Handshake` will accept any object that implements the `Messenger` interface defined by post-me.
+Internally, the low level differences between communicating with a `Worker`, a `Window`, or a `MessageChannel` have been abstracted, and the `Handshake` will accept any object that implements the `Messenger` interface defined by __post-me__.
 
 This approach makes it easy for post-me to be extended by its users.
 
-A `Messenger` implementation for communicating between window is already provided in the library (`WindowMessenger`).
+A `Messenger` implementation for communicating between `Windows` and `MessagePorts` is already provided in the library (`WindowMessenger` and `PortMessenger`).
 
+<a id="windows"></a>
+
+### Windows
 Here is an example of using post-me to communicate with an iframe.
 
 Parent code:
@@ -226,6 +231,30 @@ const messenger = new WindowMessenger({
 });
 
 ChildHandshake(messenger).then((connection) => {/* ... */});
+```
+
+<a id="channels"></a>
+
+### MessageChannels
+Here is an example of using post-me to communicate over a `MessageChannel`.
+
+```typescript
+import { ParentHandshake, ChildHandshake, PortMessenger } from 'post-me';
+
+// Create a MessageChannel
+const channel = new MessageChannel();
+const port1 = channel.port1;
+const port2 = channel.port2;
+
+// In the real world  port1 and port2 would be transferred to other workers/windows
+{
+  const messenger = new PortMessenger({port: port1});
+  ParentHandshake(messenger).then(connection => {/* ... */});
+}
+{
+  const messenger = new PortMessenger({port: port2});
+  ChildHandshake(messenger).then(connection => {/* ... */});
+}
 ```
 
 <a id="callbacks"></a>
