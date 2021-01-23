@@ -61,28 +61,47 @@ export class WindowMessenger implements Messenger {
   }
 }
 
-export class WorkerMessenger implements Messenger {
-  postMessage: (message: any, transfer?: Transferable[]) => void;
-  addMessageListener: (listener: MessageListener) => ListenerRemover;
+interface Postable {
+  postMessage(message: any, transfer?: Transferable[]): void;
+  addEventListener(eventName: 'message', listener: MessageListener): void;
+  removeEventListener(eventName: 'message', listener: MessageListener): void;
+}
 
+export class BareMessenger implements Messenger {
+  _postable: Postable;
+
+  constructor(postable: Postable) {
+    this._postable = postable;
+  }
+
+  postMessage(message: any, transfer: Transferable[] = []) {
+    this._postable.postMessage(message, transfer);
+  }
+
+  addMessageListener(listener: MessageListener): ListenerRemover {
+    const outerListener = (event: MessageEvent) => {
+      listener(event);
+    };
+
+    this._postable.addEventListener('message', outerListener);
+
+    const removeListener = () => {
+      this._postable.removeEventListener('message', outerListener);
+    };
+
+    return removeListener;
+  }
+}
+
+export class WorkerMessenger extends BareMessenger implements Messenger {
   constructor({ worker }: { worker: Worker }) {
-    this.postMessage = (message, transfer = []) => {
-      worker.postMessage(message, transfer);
-    };
+    super(worker);
+  }
+}
 
-    this.addMessageListener = (listener) => {
-      const outerListener = (event: MessageEvent) => {
-        listener(event);
-      };
-
-      (worker as any).addEventListener('message', outerListener);
-
-      const removeListener = () => {
-        (worker as any).removeEventListener('message', outerListener);
-      };
-
-      return removeListener;
-    };
+export class PortMessenger extends BareMessenger implements Messenger {
+  constructor({ port }: { port: MessagePort }) {
+    super(port);
   }
 }
 
