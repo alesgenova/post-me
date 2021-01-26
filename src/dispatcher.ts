@@ -1,6 +1,6 @@
 import { IdType, KeyType, createUniqueIdFn } from './common';
 import { Messenger } from './messenger';
-import { Emitter } from './emitter';
+import { ConcreteEmitter } from './emitter';
 import {
   isMessage,
   isCallMessage,
@@ -42,7 +42,7 @@ export type DispatcherEvents = {
   [MessageType.Event]: EventMessage<any>;
 };
 
-export class Dispatcher extends Emitter<DispatcherEvents> {
+export class Dispatcher extends ConcreteEmitter<DispatcherEvents> {
   private messenger: Messenger;
   private sessionId: IdType;
   private removeMessengerListener: () => void;
@@ -138,7 +138,7 @@ export type ParentHandshakeDispatcherEvents = {
   [x: number]: HandshakeResponseMessage;
 };
 
-export class ParentHandshakeDispatcher extends Emitter<ParentHandshakeDispatcherEvents> {
+export class ParentHandshakeDispatcher extends ConcreteEmitter<ParentHandshakeDispatcherEvents> {
   private messenger: Messenger;
   private sessionId: IdType;
   private removeMessengerListener: () => void;
@@ -186,7 +186,7 @@ export type ChildHandshakeDispatcherEvents = {
   [MessageType.HandshakeRequest]: HandshakeRequestMessage;
 };
 
-export class ChildHandshakeDispatcher extends Emitter<ChildHandshakeDispatcherEvents> {
+export class ChildHandshakeDispatcher extends ConcreteEmitter<ChildHandshakeDispatcherEvents> {
   private messenger: Messenger;
   private removeMessengerListener: () => void;
 

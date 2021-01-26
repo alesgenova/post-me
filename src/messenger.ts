@@ -1,9 +1,35 @@
 type MessageListener = (event: MessageEvent) => void;
 type ListenerRemover = () => void;
 
+/**
+ * An interface used internally to exchange low level messages across contexts.
+ *
+ * @remarks
+ *
+ * Having a single interface lets post-me deal with Workers, Windows, and MessagePorts
+ * without having to worry about their differences.
+ *
+ * A few concrete implementations of the Messenger interface are provided.
+ *
+ * @public
+ *
+ */
 export interface Messenger {
-  postMessage: (message: any, transfer?: Transferable[]) => void;
-  addMessageListener: (listener: MessageListener) => ListenerRemover;
+  /**
+   * Send a message to the other context
+   *
+   * @param message - The payload of the message
+   * @param transfer - A list of Transferable objects that should be transferred to the other context instead of cloned.
+   */
+  postMessage(message: any, transfer?: Transferable[]): void;
+
+  /**
+   * Add a listener to messages received by the other context
+   *
+   * @param listener - A listener that will receive the MessageEvent
+   * @returns A function that can be invoked to remove the listener
+   */
+  addMessageListener(listener: MessageListener): ListenerRemover;
 }
 
 const acceptableMessageEvent = (
@@ -24,6 +50,12 @@ const acceptableMessageEvent = (
   return true;
 };
 
+/**
+ * A concrete implementation of {@link Messenger} used to communicate with another Window.
+ *
+ * @public
+ *
+ */
 export class WindowMessenger implements Messenger {
   postMessage: (message: any, transfer?: Transferable[]) => void;
   addMessageListener: (listener: MessageListener) => ListenerRemover;
@@ -67,6 +99,7 @@ interface Postable {
   removeEventListener(eventName: 'message', listener: MessageListener): void;
 }
 
+/** @public */
 export class BareMessenger implements Messenger {
   postMessage: (message: any, transfer?: Transferable[]) => void;
   addMessageListener: (listener: MessageListener) => ListenerRemover;
@@ -92,25 +125,55 @@ export class BareMessenger implements Messenger {
   }
 }
 
+/**
+ * A concrete implementation of {@link Messenger} used to communicate with a Worker.
+ *
+ * @public
+ *
+ */
 export class WorkerMessenger extends BareMessenger implements Messenger {
   constructor({ worker }: { worker: Worker }) {
     super(worker);
   }
 }
 
+/**
+ * A concrete implementation of {@link Messenger} used to communicate with a MessagePort.
+ *
+ * @public
+ *
+ */
 export class PortMessenger extends BareMessenger implements Messenger {
   constructor({ port }: { port: MessagePort }) {
     super(port);
   }
 }
 
-export const debug = (namespace: string, log?: (...data: any[]) => void) => {
+/**
+ * Create a logger function with a specific namespace
+ *
+ * @param namespace - The namespace will be prepended to all the arguments passed to the logger function
+ * @param log - The underlying logger (`console.log` by default)
+ *
+ * @public
+ *
+ */
+export function debug(namespace: string, log?: (...data: any[]) => void) {
   log = log || console.debug || console.log || (() => {});
   return (...data: any[]) => {
     log!(namespace, ...data);
   };
-};
+}
 
+/**
+ * Decorate a {@link Messenger} so that it will log any message exchanged
+ * @param messenger - The Messenger that will be decorated
+ * @param log - The logger function that will receive each message
+ * @returns A decorated Messenger
+ *
+ * @public
+ *
+ */
 export function DebugMessenger(
   messenger: Messenger,
   log?: (...data: any[]) => void

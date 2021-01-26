@@ -3,10 +3,22 @@ export const MARKER = '@post-me';
 export type IdType = number;
 export type KeyType = string;
 
+/**
+ * The options that can be passed when calling a method on the other context with RemoteHandle.customCall()
+ *
+ * @public
+ *
+ */
 export type CallOptions = {
   transfer?: Transferable[];
 };
 
+/**
+ * The options that can be passed when emitting an event to the other context with LocalHandle.emit()
+ *
+ * @public
+ *
+ */
 export type EmitOptions = {
   transfer?: Transferable[];
 };

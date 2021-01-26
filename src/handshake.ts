@@ -31,6 +31,17 @@ const runUntil = (
   fn();
 };
 
+/**
+ * Initiate the handshake from the Parent side
+ *
+ * @param messenger - The Messenger used to send and receive messages from the other end
+ * @param localMethods - The methods that will be exposed to the other end
+ * @param maxAttempts - The maximum number of handshake attempts
+ * @param attemptsInterval - The interval between handshake attempts
+ * @returns A Promise to an active {@link Connection} to the other end
+ *
+ * @public
+ */
 export function ParentHandshake<M0 extends MethodsType>(
   messenger: Messenger,
   localMethods: M0 = {} as M0,
@@ -67,6 +78,15 @@ export function ParentHandshake<M0 extends MethodsType>(
   });
 }
 
+/**
+ * Initiate the handshake from the Child side
+ *
+ * @param messenger - The Messenger used to send and receive messages from the other end
+ * @param localMethods - The methods that will be exposed to the other end
+ * @returns A Promise to an active {@link Connection} to the other end
+ *
+ * @public
+ */
 export function ChildHandshake<M extends MethodsType>(
   messenger: Messenger,
   localMethods: M = {} as M
