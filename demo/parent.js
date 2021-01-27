@@ -3,7 +3,7 @@ import {
   WindowMessenger,
   WorkerMessenger,
   DebugMessenger,
-} from './post-me.esm.js';
+} from './post-me.mjs';
 
 debug.enable(
   'post-me:parent0,post-me:parent1,post-me:parent2,post-me:parent3,post-me:parentW'

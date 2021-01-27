@@ -68,28 +68,27 @@ interface Postable {
 }
 
 export class BareMessenger implements Messenger {
-  _postable: Postable;
+  postMessage: (message: any, transfer?: Transferable[]) => void;
+  addMessageListener: (listener: MessageListener) => ListenerRemover;
 
   constructor(postable: Postable) {
-    this._postable = postable;
-  }
-
-  postMessage(message: any, transfer: Transferable[] = []) {
-    this._postable.postMessage(message, transfer);
-  }
-
-  addMessageListener(listener: MessageListener): ListenerRemover {
-    const outerListener = (event: MessageEvent) => {
-      listener(event);
+    this.postMessage = (message, transfer = []) => {
+      postable.postMessage(message, transfer);
     };
 
-    this._postable.addEventListener('message', outerListener);
+    this.addMessageListener = (listener) => {
+      const outerListener = (event: MessageEvent) => {
+        listener(event);
+      };
 
-    const removeListener = () => {
-      this._postable.removeEventListener('message', outerListener);
+      postable.addEventListener('message', outerListener);
+
+      const removeListener = () => {
+        postable.removeEventListener('message', outerListener);
+      };
+
+      return removeListener;
     };
-
-    return removeListener;
   }
 }
 
