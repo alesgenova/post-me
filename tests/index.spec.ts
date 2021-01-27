@@ -58,7 +58,6 @@ const childMethods: ChildMethods = {
   throws: () => Promise.reject(new Error('Oh no! - child')),
   ping: (s) => s,
   slowSum: (x, y, onStart, onProgress) => {
-    console.log('ONSTART', onStart);
     onStart(-1);
     return new Promise((resolve) => {
       const nIterations = 5;

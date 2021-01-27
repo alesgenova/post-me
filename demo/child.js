@@ -1,8 +1,4 @@
-import {
-  ChildHandshake,
-  WindowMessenger,
-  DebugMessenger,
-} from './post-me.esm.js';
+import { ChildHandshake, WindowMessenger, DebugMessenger } from './post-me.mjs';
 
 const debugNamespace = `post-me:${window.name}`;
 debug.enable(debugNamespace);
