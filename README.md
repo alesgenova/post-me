@@ -33,7 +33,8 @@ In this [live demo](https://alesgenova.github.io/post-me-demo) the main window c
 5. [Callbacks as parameters](#callbacks)
 6. [Transfer vs Clone](#transfer)
 7. [Debugging](#debugging)
-8. [References](#references)
+8. [API Documentation](#api)
+9. [References](#references)
 
 <a id="install"></a>
 
@@ -385,6 +386,12 @@ ParentHandshake(messenger).then((connection) => {
 
 Output:
 ![debug output](debug.png)
+
+<a id="api"></a>
+
+## API Documentation
+
+The full [__API reference__](https://alesgenova.github.io/post-me/post-me.html)  cab be found [here](https://alesgenova.github.io/post-me/post-me.html).
 
 <a id="references"></a>
 

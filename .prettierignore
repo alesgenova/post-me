@@ -3,4 +3,7 @@
 /www
 /coverage
 /scripts
+/api
+/docs
+/temp
 *.config.js
