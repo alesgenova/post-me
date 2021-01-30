@@ -7,15 +7,41 @@ import {
   RemoteHandle,
 } from './handles';
 
+/**
+ * An active connection between two contexts
+ *
+ * @typeParam M0 - The methods exposed by this context
+ * @typeParam E1 - The events exposed by this context
+ * @typeParam M1 - The methods exposed by the other context
+ * @typeParam E1 - The events exposed by the other context
+ *
+ * @public
+ *
+ */
 export interface Connection<
   M0 extends MethodsType = any,
   E0 extends EventsType = any,
   M1 extends MethodsType = any,
   E1 extends EventsType = any
 > {
-  localHandle: () => LocalHandle<M0, E0>;
-  remoteHandle: () => RemoteHandle<M1, E1>;
-  close: () => void;
+  /**
+   * Get a handle to the local end of the connection
+   *
+   * @returns A {@link LocalHandle} to the local side of the Connection
+   */
+  localHandle(): LocalHandle<M0, E0>;
+
+  /**
+   * Get a handle to the other end of the connection
+   *
+   * @returns A {@link RemoteHandle} to the other side of the Connection
+   */
+  remoteHandle(): RemoteHandle<M1, E1>;
+
+  /**
+   * Stop listening to incoming message from the other side
+   */
+  close(): void;
 }
 
 export class ConcreteConnection<M0 extends MethodsType> implements Connection {

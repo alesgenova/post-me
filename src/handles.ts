@@ -5,7 +5,7 @@ import {
   EmitOptions,
   CallOptions,
 } from './common';
-import { Emitter, IEmitter } from './emitter';
+import { Emitter, ConcreteEmitter } from './emitter';
 import { Dispatcher } from './dispatcher';
 import {
   MessageType,
@@ -16,49 +16,149 @@ import {
 } from './messages';
 import { createCallbackProxy, isCallbackProxy } from './proxy';
 
+/**
+ * A handle to the other end of the connection
+ *
+ * @remarks
+ *
+ * Use this handle to:
+ *
+ *   - Call methods exposed by the other end
+ *
+ *   - Add listeners to custom events emitted by the other end
+ *
+ * @typeParam M - The methods exposed by the other context
+ * @typeParam E - The events exposed by the other context
+ *
+ * @public
+ *
+ */
 export interface RemoteHandle<
   M extends MethodsType = any,
   E extends EventsType = any
-> extends IEmitter<E> {
-  call: <K extends keyof M>(
+> extends Emitter<E> {
+  /**
+   * Call a method exposed by the other end.
+   *
+   * @param methodName - The name of the method
+   * @param args - The list of arguments passed to the method
+   * @returns A Promise of the value returned by the method
+   *
+   */
+  call<K extends keyof M>(
     methodName: K,
     ...args: Parameters<M[K]>
-  ) => Promise<InnerType<ReturnType<M[K]>>>;
-  customCall: <K extends keyof M>(
+  ): Promise<InnerType<ReturnType<M[K]>>>;
+
+  /**
+   * Call a method exposed by the other end.
+   *
+   * @param methodName - The name of the method
+   * @param args - The list of arguments passed to the method
+   * @param options - The {@link CallOptions} to customize this method call
+   * @returns A Promise of the value returned by the method
+   *
+   */
+  customCall<K extends keyof M>(
     methodName: K,
     args: Parameters<M[K]>,
     options?: CallOptions
-  ) => Promise<InnerType<ReturnType<M[K]>>>;
-  setCallTransfer: <K extends keyof M>(
+  ): Promise<InnerType<ReturnType<M[K]>>>;
+
+  /**
+   * Specify which parts of the arguments of a given method call should be transferred
+   * into the other context instead of cloned.
+   *
+   * @remarks
+   *
+   * You only need to call setCallTransfer once per method. After the transfer function is set,
+   * it will automatically be used by all subsequent calls to the specified method.
+   *
+   * @param methodName - The name of the method
+   * @param transfer - A function that takes as parameters the arguments of a method call, and returns a list of transferable objects.
+   *
+   */
+  setCallTransfer<K extends keyof M>(
     methodName: K,
     transfer: (...args: Parameters<M[K]>) => Transferable[]
-  ) => void;
+  ): void;
 }
 
+/**
+ * A handle to the local end of the connection
+ *
+ * @remarks
+ *
+ * Use this handle to:
+ *
+ * - Emit custom events to the other end
+ *
+ * @typeParam M - The methods exposed by this context
+ * @typeParam E - The events exposed by this context
+ *
+ * @public
+ *
+ */
 export interface LocalHandle<
   M extends MethodsType = any,
   E extends EventsType = any
 > {
-  emit: <K extends keyof E>(
+  /**
+   * Emit a custom event with a payload. The event can be captured by the other context.
+   *
+   * @param eventName - The name of the event
+   * @param data - The payload associated with the event
+   * @param options - The {@link EmitOptions} to customize this emit call
+   *
+   */
+  emit<K extends keyof E>(
     eventName: K,
     data: E[K],
     options?: EmitOptions
-  ) => void;
-  setReturnTransfer: <K extends keyof M>(
+  ): void;
+
+  /**
+   * Specify which parts of the return value of a given method call should be transferred
+   * into the other context instead of cloned.
+   *
+   * @remarks
+   *
+   * You only need to call setReturnTransfer once per method. After the transfer function is set,
+   * it will automatically be used every time a value is returned by the specified method.
+   *
+   * @param methodName - The name of the method
+   * @param transfer - A function that takes as parameter the return value of a method call, and returns a list of transferable objects.
+   *
+   */
+  setReturnTransfer<K extends keyof M>(
     methodName: K,
     transfer: (result: InnerType<ReturnType<M[K]>>) => Transferable[]
-  ) => void;
-  setEmitTransfer: <K extends keyof E>(
+  ): void;
+
+  /**
+   * Specify which parts of the payload of a given event should be transferred
+   * into the other context instead of cloned.
+   *
+   * @remarks
+   *
+   * You only need to call setEmitTransfer once per event type. After the transfer function is set,
+   * it will automatically be used every time a payload is attached to the specific event.
+   *
+   * @param eventName - The name of the method
+   * @param transfer - A function that takes as parameter the payload of an event, and returns a list of transferable objects.
+   *
+   */
+  setEmitTransfer<K extends keyof E>(
     eventName: K,
     transfer: (payload: E[K]) => Transferable[]
-  ) => void;
+  ): void;
 }
 
 export class ConcreteRemoteHandle<
     M extends MethodsType = any,
     E extends EventsType = any
   >
-  extends Emitter<E>
+  extends ConcreteEmitter<E>
   implements RemoteHandle<M, E> {
   private _dispatcher: Dispatcher;
   private _callTransfer: { [x: string]: (...args: any) => Transferable[] };

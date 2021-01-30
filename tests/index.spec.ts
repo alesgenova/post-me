@@ -1,6 +1,6 @@
 import { ParentHandshake, ChildHandshake } from '../src/handshake';
 import { Connection } from '../src/connection';
-import { Emitter } from '../src/emitter';
+import { ConcreteEmitter } from '../src/emitter';
 import {
   Messenger,
   WindowMessenger,
@@ -758,8 +758,8 @@ test('debug', () => {
 });
 
 function MockWorker(script: (self: any) => void) {
-  const worker: any = new Emitter();
-  const self: any = new Emitter();
+  const worker: any = new ConcreteEmitter();
+  const self: any = new ConcreteEmitter();
 
   self.postMessage = (payload: any) => {
     worker.emit('message', { data: payload });
