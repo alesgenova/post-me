@@ -11,7 +11,7 @@ import {
  * An active connection between two contexts
  *
  * @typeParam M0 - The methods exposed by this context
- * @typeParam E1 - The events exposed by this context
+ * @typeParam E0 - The events exposed by this context
  * @typeParam M1 - The methods exposed by the other context
  * @typeParam E1 - The events exposed by the other context
  *
