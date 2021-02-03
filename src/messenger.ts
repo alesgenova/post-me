@@ -145,6 +145,7 @@ export class WorkerMessenger extends BareMessenger implements Messenger {
  */
 export class PortMessenger extends BareMessenger implements Messenger {
   constructor({ port }: { port: MessagePort }) {
+    port.start();
     super(port);
   }
 }
