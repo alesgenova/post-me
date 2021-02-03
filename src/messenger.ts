@@ -145,6 +145,7 @@ export class WorkerMessenger extends BareMessenger implements Messenger {
  */
 export class PortMessenger extends BareMessenger implements Messenger {
   constructor({ port }: { port: MessagePort }) {
+    port.start();
     super(port);
   }
 }
@@ -188,9 +189,9 @@ export function DebugMessenger(
   messenger.addMessageListener(debugListener);
 
   return {
-    postMessage: function (message) {
+    postMessage: function (message, transfer) {
       log!('➡️ sending message', message);
-      messenger.postMessage(message);
+      messenger.postMessage(message, transfer);
     },
     addMessageListener: function (listener) {
       return messenger.addMessageListener(listener);
