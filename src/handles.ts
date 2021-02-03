@@ -93,6 +93,8 @@ export interface RemoteHandle<
  *
  * - Emit custom events to the other end
  *
+ * - Set the methods that are exposed to the other end
+ *
  * @typeParam M - The methods exposed by this context
  * @typeParam E - The events exposed by this context
  *
@@ -116,6 +118,23 @@ export interface LocalHandle<
     data: E[K],
     options?: EmitOptions
   ): void;
+
+  /**
+   * Set the methods that will be exposed to the other end of the connection.
+   *
+   * @param methods - An object mapping method names to functions
+   *
+   */
+  setMethods(methods: M): void;
+
+  /**
+   * Set a specific method that will be exposed to the other end of the connection.
+   *
+   * @param methodName - The name of the method
+   * @param method - The function that will be exposed
+   *
+   */
+  setMethod<K extends keyof M>(methodName: K, method: M[K]): void;
 
   /**
    * Specify which parts of the return value of a given method call should be transferred
@@ -300,6 +319,14 @@ export class ConcreteLocalHandle<
     }
 
     this._dispatcher.emitToRemote(eventName as string, payload, transfer);
+  }
+
+  setMethods(methods: M) {
+    this._methods = methods;
+  }
+
+  setMethod<K extends keyof M>(methodName: K, method: M[K]) {
+    this._methods[methodName] = method;
   }
 
   setReturnTransfer<K extends keyof M>(
