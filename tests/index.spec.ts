@@ -13,7 +13,7 @@ import { JSDOM } from 'jsdom';
 
 import MessageEventJSDOM from 'jsdom/lib/jsdom/living/generated/MessageEvent';
 import { fireAnEvent } from 'jsdom/lib/jsdom/living/helpers/events';
-import { RemoteHandle } from '../src/handles';
+import { LocalHandle, RemoteHandle } from '../src/handles';
 
 type ChildMethods = {
   foo: (x: number) => number;
@@ -829,4 +829,65 @@ test('callback', () => {
       }
     });
   });
+});
+
+test('set methods', async () => {
+  const parentOrigin = 'https://parent.example.com';
+  const childOrigin = 'https://child.example.com';
+  const [parentWindow, childWindow] = makeWindows(parentOrigin, childOrigin);
+
+  const parentMessenger = new WindowMessenger({
+    localWindow: parentWindow,
+    remoteWindow: childWindow,
+    remoteOrigin: childWindow.origin,
+  });
+
+  const childMessenger = new WindowMessenger({
+    localWindow: childWindow,
+    remoteWindow: parentWindow,
+    remoteOrigin: parentWindow.origin,
+  });
+
+  const initialChildMethods = {
+    foo() {
+      return 1;
+    },
+    bar() {
+      return 1;
+    },
+  };
+
+  const [parentConnection, childConnection] = await Promise.all([
+    ParentHandshake(parentMessenger),
+    ChildHandshake(childMessenger, initialChildMethods),
+  ] as const);
+
+  // Child code
+  {
+    const localHandle: LocalHandle<
+      typeof initialChildMethods
+    > = childConnection.localHandle();
+
+    const newChildMethods = {
+      foo() {
+        return 2;
+      },
+      bar() {
+        return 2;
+      },
+    };
+
+    localHandle.setMethods(newChildMethods);
+    localHandle.setMethod('bar', () => 3);
+  }
+
+  // Parent code
+  {
+    const remoteHandle: RemoteHandle<
+      typeof initialChildMethods
+    > = parentConnection.remoteHandle();
+
+    expect(await remoteHandle.call('foo')).toEqual(2);
+    expect(await remoteHandle.call('bar')).toEqual(3);
+  }
 });
