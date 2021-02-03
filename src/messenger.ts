@@ -188,9 +188,9 @@ export function DebugMessenger(
   messenger.addMessageListener(debugListener);
 
   return {
-    postMessage: function (message) {
+    postMessage: function (message, transfer) {
       log!('➡️ sending message', message);
-      messenger.postMessage(message);
+      messenger.postMessage(message, transfer);
     },
     addMessageListener: function (listener) {
       return messenger.addMessageListener(listener);
