@@ -104,6 +104,12 @@ export class Dispatcher extends ConcreteEmitter<DispatcherEvents> {
     error: any,
     transfer?: Transferable[]
   ) {
+    if (error instanceof Error) {
+      error = {
+        name: error.name,
+        message: error.message,
+      };
+    }
     const message = createResponsMessage(
       this.sessionId,
       requestId,
