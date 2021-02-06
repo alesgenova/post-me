@@ -142,7 +142,7 @@ export function createEventMessage<P>(
 // Type Guards
 
 export function isMessage(m: any): m is Message<any> {
-  return m.type === MARKER;
+  return m && m.type === MARKER;
 }
 
 export function isHandshakeRequestMessage(
