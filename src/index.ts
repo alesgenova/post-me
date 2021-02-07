@@ -15,7 +15,15 @@ import {
   debug,
 } from './messenger';
 import { RemoteHandle, LocalHandle } from './handles';
-import { CallOptions, EmitOptions } from './common';
+import {
+  CallOptions,
+  EmitOptions,
+  MethodsType,
+  EventsType,
+  Callable,
+  ValueOrPromise,
+  InnerType,
+} from './common';
 
 export {
   // Interfaces
@@ -38,4 +46,10 @@ export {
   // Types
   CallOptions,
   EmitOptions,
+  // Type Helpers
+  MethodsType,
+  EventsType,
+  Callable,
+  ValueOrPromise,
+  InnerType,
 };

@@ -22,5 +22,5 @@ export function createCallbackProxy(callbackId: IdType): CallbackProxy {
 }
 
 export function isCallbackProxy(p: any): p is CallbackProxy {
-  return p.type === MARKER && p.proxy === ProxyType.Callback;
+  return p && p.type === MARKER && p.proxy === ProxyType.Callback;
 }
