@@ -17,17 +17,22 @@ export class BareMessenger implements Messenger {
     postMessage: (message: any, transfer?: Transferable[]) => void;
 }
 
+// Warning: (ae-internal-missing-underscore) The name "Callable" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
+export type Callable<A extends Array<any>, R> = (...args: A) => R;
+
 // @public
 export type CallOptions = {
     transfer?: Transferable[];
 };
 
-// Warning: (ae-forgotten-export) The symbol "MethodsType" needs to be exported by the entry point index.d.ts
+// Warning: (ae-incompatible-release-tags) The symbol "ChildHandshake" is marked as @public, but its signature references "MethodsType" which is marked as @internal
 //
 // @public
 export function ChildHandshake<M extends MethodsType>(messenger: Messenger, localMethods?: M): Promise<Connection>;
 
-// Warning: (ae-forgotten-export) The symbol "EventsType" needs to be exported by the entry point index.d.ts
+// Warning: (ae-incompatible-release-tags) The symbol "ConcreteEmitter" is marked as @public, but its signature references "EventsType" which is marked as @internal
 //
 // @public
 export class ConcreteEmitter<E extends EventsType> implements Emitter<E> {
@@ -41,6 +46,9 @@ export class ConcreteEmitter<E extends EventsType> implements Emitter<E> {
     removeEventListener<K extends keyof E>(eventName: K, listener: (data: E[K]) => void): void;
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "Connection" is marked as @public, but its signature references "MethodsType" which is marked as @internal
+// Warning: (ae-incompatible-release-tags) The symbol "Connection" is marked as @public, but its signature references "EventsType" which is marked as @internal
+//
 // @public
 export interface Connection<M0 extends MethodsType = any, E0 extends EventsType = any, M1 extends MethodsType = any, E1 extends EventsType = any> {
     close(): void;
@@ -59,6 +67,8 @@ export type EmitOptions = {
     transfer?: Transferable[];
 };
 
+// Warning: (ae-incompatible-release-tags) The symbol "Emitter" is marked as @public, but its signature references "EventsType" which is marked as @internal
+//
 // @public
 export interface Emitter<E extends EventsType> {
     addEventListener<K extends keyof E>(eventName: K, listener: (data: E[K]) => void): void;
@@ -66,11 +76,27 @@ export interface Emitter<E extends EventsType> {
     removeEventListener<K extends keyof E>(eventName: K, listener: (data: E[K]) => void): void;
 }
 
+// Warning: (ae-forgotten-export) The symbol "KeyType" needs to be exported by the entry point index.d.ts
+// Warning: (ae-internal-missing-underscore) The name "EventsType" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
+export type EventsType = Record<KeyType_2, any>;
+
+// Warning: (ae-internal-missing-underscore) The name "InnerType" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
+export type InnerType<T extends ValueOrPromise<any>> = T extends Promise<infer U> ? U : T;
+
+// Warning: (ae-incompatible-release-tags) The symbol "LocalHandle" is marked as @public, but its signature references "MethodsType" which is marked as @internal
+// Warning: (ae-incompatible-release-tags) The symbol "LocalHandle" is marked as @public, but its signature references "EventsType" which is marked as @internal
+//
 // @public
 export interface LocalHandle<M extends MethodsType = any, E extends EventsType = any> {
     emit<K extends keyof E>(eventName: K, data: E[K], options?: EmitOptions): void;
     setEmitTransfer<K extends keyof E>(eventName: K, transfer: (payload: E[K]) => Transferable[]): void;
-    // Warning: (ae-forgotten-export) The symbol "InnerType" needs to be exported by the entry point index.d.ts
+    setMethod<K extends keyof M>(methodName: K, method: M[K]): void;
+    setMethods(methods: M): void;
+    // Warning: (ae-incompatible-release-tags) The symbol "setReturnTransfer" is marked as @public, but its signature references "InnerType" which is marked as @internal
     setReturnTransfer<K extends keyof M>(methodName: K, transfer: (result: InnerType<ReturnType<M[K]>>) => Transferable[]): void;
 }
 
@@ -80,6 +106,13 @@ export interface Messenger {
     postMessage(message: any, transfer?: Transferable[]): void;
 }
 
+// Warning: (ae-internal-missing-underscore) The name "MethodsType" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
+export type MethodsType = Record<KeyType_2, Callable<any[], ValueOrPromise<any>>>;
+
+// Warning: (ae-incompatible-release-tags) The symbol "ParentHandshake" is marked as @public, but its signature references "MethodsType" which is marked as @internal
+//
 // @public
 export function ParentHandshake<M0 extends MethodsType>(messenger: Messenger, localMethods?: M0, maxAttempts?: number, attemptsInterval?: number): Promise<Connection>;
 
@@ -90,12 +123,22 @@ export class PortMessenger extends BareMessenger implements Messenger {
     });
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "RemoteHandle" is marked as @public, but its signature references "MethodsType" which is marked as @internal
+// Warning: (ae-incompatible-release-tags) The symbol "RemoteHandle" is marked as @public, but its signature references "EventsType" which is marked as @internal
+//
 // @public
 export interface RemoteHandle<M extends MethodsType = any, E extends EventsType = any> extends Emitter<E> {
+    // Warning: (ae-incompatible-release-tags) The symbol "call" is marked as @public, but its signature references "InnerType" which is marked as @internal
     call<K extends keyof M>(methodName: K, ...args: Parameters<M[K]>): Promise<InnerType<ReturnType<M[K]>>>;
+    // Warning: (ae-incompatible-release-tags) The symbol "customCall" is marked as @public, but its signature references "InnerType" which is marked as @internal
     customCall<K extends keyof M>(methodName: K, args: Parameters<M[K]>, options?: CallOptions): Promise<InnerType<ReturnType<M[K]>>>;
     setCallTransfer<K extends keyof M>(methodName: K, transfer: (...args: Parameters<M[K]>) => Transferable[]): void;
 }
+
+// Warning: (ae-internal-missing-underscore) The name "ValueOrPromise" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal (undocumented)
+export type ValueOrPromise<T> = T | Promise<T>;
 
 // @public
 export class WindowMessenger implements Messenger {
