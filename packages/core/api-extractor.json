@@ -113,7 +113,7 @@
      * SUPPORTED TOKENS: <packageName>, <unscopedPackageName>
      * DEFAULT VALUE: "<unscopedPackageName>.api.md"
      */
-    // "reportFileName": "<unscopedPackageName>.api.md",
+    "reportFileName": "<unscopedPackageName>.api.md",
     /**
      * Specifies the folder where the API report file is written.  The file name portion is determined by
      * the "reportFileName" setting.
@@ -160,7 +160,7 @@
      * SUPPORTED TOKENS: <projectFolder>, <packageName>, <unscopedPackageName>
      * DEFAULT VALUE: "<projectFolder>/temp/<unscopedPackageName>.api.json"
      */
-    "apiJsonFilePath": "<projectFolder>/docs/input/<unscopedPackageName>.api.json"
+    "apiJsonFilePath": "<projectFolder>/../../docs/input/<unscopedPackageName>.api.json"
   },
   /**
    * Configures how the .d.ts rollup file will be generated.
