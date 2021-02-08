@@ -1,0 +1,8 @@
+node_modules/
+dist/
+www/
+docs/
+temp/
+
+coverage/
+.rpt2_cache/

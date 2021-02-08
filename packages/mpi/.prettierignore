@@ -1,0 +1,9 @@
+/node_modules
+/dist
+/www
+/coverage
+/scripts
+/api
+/docs
+/temp
+*.config.js
