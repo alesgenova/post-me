@@ -23,7 +23,7 @@
     "import": "./dist/index.esnext.mjs",
     "require": "./dist/index.js"
   },
-  "module": "./dist/index.es5.mjs",
+  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "files": [
     "dist"
