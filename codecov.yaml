@@ -1,2 +1,9 @@
 fixes:
-  - "/home/runner/work/alesgenova/post-me/::"
+  - "/home/runner/work/alesgenova/post-me/packages::packages"
+flags:
+  core:
+    paths:
+      - packages/core/
+  mpi:
+    paths:
+      - packages/mpi/

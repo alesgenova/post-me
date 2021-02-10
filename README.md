@@ -33,8 +33,9 @@ In this [live demo](https://alesgenova.github.io/post-me-demo) the main window c
 5. [Callbacks as parameters](#callbacks)
 6. [Transfer vs Clone](#transfer)
 7. [Debugging](#debugging)
-8. [API Documentation](#api)
-9. [References](#references)
+8. [Parallel Programming](#parallel)
+9. [API Documentation](#api)
+10. [References](#references)
 
 <a id="install"></a>
 
@@ -49,7 +50,7 @@ import { ParentHandshake } from 'post-me';
 
 Import __post-me__ as a script:
 ```html
-<script src="https://unpkg.com/post-me/dist/index.min.js"></script>
+<script src="https://unpkg.com/post-me/dist/index.js"></script>
 
 <script>
   const ParentHandshake = PostMe.ParentHandshake;
@@ -387,11 +388,16 @@ ParentHandshake(messenger).then((connection) => {
 Output:
 ![debug output](debug.png)
 
+<a id="parallel"></a>
+
+## Parallel Programming
+[__@post-me/mpi__](https://github.com/alesgenova/post-me/tree/main/packages/mpi) is an experimental library to write parallel algorithms that run on a pool of workers using a MPI-like syntax. See the dedicated [README](https://github.com/alesgenova/post-me/tree/main/packages/mpi) for more information.
+
 <a id="api"></a>
 
 ## API Documentation
 
-The full [__API reference__](https://alesgenova.github.io/post-me/post-me.html)  cab be found [here](https://alesgenova.github.io/post-me/post-me.html).
+The full [__API reference__](https://alesgenova.github.io/post-me/post-me.html) can be found [here](https://alesgenova.github.io/post-me/post-me.html).
 
 <a id="references"></a>
 

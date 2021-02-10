@@ -14,6 +14,6 @@ if (fs.existsSync(destination)) {
 
 fs.mkdirSync(destination);
 
-fs.copySync('dist/index.es5.mjs', `${destination}/post-me.mjs`);
+fs.copySync('dist/index.mjs', `${destination}/post-me.mjs`);
 fs.copySync('dist/index.js', `${destination}/post-me.js`);
 fs.copySync('demo', destination);

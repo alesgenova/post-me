@@ -11,7 +11,7 @@ export default {
     },
     // ES Module, transpiled to ES5
     {
-      file: 'dist/index.es5.mjs',
+      file: 'dist/index.mjs',
       format: 'esm',
       plugins: [
         getBabelOutputPlugin({
