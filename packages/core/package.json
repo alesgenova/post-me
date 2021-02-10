@@ -1,6 +1,6 @@
 {
   "name": "post-me",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "Use web Workers and other Windows through a simple Promise API",
   "author": {
     "name": "Alessandro Genova",
@@ -47,7 +47,6 @@
     "prettier:check-all": "prettier --check '**/*.{js,jsx,ts,tsx,css,html}'",
     "prettier:write-all": "prettier --write '**/*.{js,jsx,ts,tsx,css,html}'"
   },
-  "dependencies": {},
   "devDependencies": {
     "@babel/core": "^7.11.6",
     "@babel/preset-env": "^7.12.11",
