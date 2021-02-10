@@ -50,7 +50,7 @@ import { ParentHandshake } from 'post-me';
 
 Import __post-me__ as a script:
 ```html
-<script src="https://unpkg.com/post-me/dist/index.min.js"></script>
+<script src="https://unpkg.com/post-me/dist/index.js"></script>
 
 <script>
   const ParentHandshake = PostMe.ParentHandshake;

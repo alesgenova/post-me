@@ -30,10 +30,9 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "build": "npm run build:src && npm run build:min && npm run build:types",
+    "build": "npm run build:src && npm run build:types",
     "build:src": "rollup -c",
     "build:types": "tsc --emitDeclarationOnly",
-    "build:min": "uglifyjs dist/index.js -o dist/index.min.js",
     "build:docs": "npm run build:types && api-extractor run --local --verbose",
     "build:demo": "npm run build:src && node demo/build.js www",
     "prepublishOnly": "npm run build",
@@ -64,8 +63,7 @@
     "rollup": "^2.35.1",
     "ts-jest": "^26.4.4",
     "tslib": "^2.0.3",
-    "typescript": "^4.1.3",
-    "uglify-js": "^3.12.4"
+    "typescript": "^4.1.3"
   },
   "husky": {
     "hooks": {
