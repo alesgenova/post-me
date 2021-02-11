@@ -128,11 +128,15 @@ export class BareMessenger implements Messenger {
 /**
  * A concrete implementation of {@link Messenger} used to communicate with a Worker.
  *
+ * Takes a {@link Postable} representing the `Worker` (when calling from
+ * the parent context) or the `self` `DedicatedWorkerGlobalScope` object
+ * (when calling from the child context).
+ *
  * @public
  *
  */
 export class WorkerMessenger extends BareMessenger implements Messenger {
-  constructor({ worker }: { worker: Worker }) {
+  constructor({ worker }: { worker: Postable }) {
     super(worker);
   }
 }
