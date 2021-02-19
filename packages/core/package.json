@@ -1,6 +1,6 @@
 {
   "name": "post-me",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "description": "Use web Workers and other Windows through a simple Promise API",
   "author": {
     "name": "Alessandro Genova",

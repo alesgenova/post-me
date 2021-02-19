@@ -1,6 +1,6 @@
 {
   "name": "@post-me/mpi",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "MPI-like concurrency for a pool of web workers",
   "author": {
     "name": "Alessandro Genova",
@@ -45,7 +45,7 @@
     "prettier:write-all": "prettier --write '**/*.{js,jsx,ts,tsx,css,html}'"
   },
   "dependencies": {
-    "post-me": "^0.4.4"
+    "post-me": "^0.4.5"
   },
   "devDependencies": {
     "@babel/core": "^7.11.6",
