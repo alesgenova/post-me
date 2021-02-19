@@ -211,6 +211,45 @@ test('call', () => {
   });
 });
 
+type ChildClassInterface = {
+  foo(x: number): number;
+};
+
+class ChildClass implements ChildClassInterface {
+  private magicNumber = 7;
+
+  foo(_x: number): number {
+    return this.magicNumber;
+  }
+}
+
+test('call:bound methods', () => {
+  return new Promise<void>((resolve, reject) => {
+    makeHandshake().then(([parentConnection, childConnection]) => {
+      const tasks: Promise<any>[] = [];
+
+      // Code in the parent app
+      {
+        const remoteHandle = parentConnection.remoteHandle();
+
+        const task = remoteHandle.call('foo', 0).then(async (value) => {
+          expect(value).toEqual(7);
+          return value;
+        });
+        tasks.push(task);
+      }
+
+      // Code in the child app
+      {
+        const localHandle: LocalHandle<ChildClassInterface> = childConnection.localHandle();
+        localHandle.setMethods(new ChildClass());
+      }
+
+      Promise.all(tasks).then(() => resolve());
+    });
+  });
+});
+
 test('emit', () => {
   return new Promise<void>((resolve, reject) => {
     makeHandshake().then(([parentConnection, childConnection]) => {
