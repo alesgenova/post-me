@@ -366,7 +366,7 @@ export class ConcreteLocalHandle<
         }
       });
 
-      Promise.resolve(method(...desanitizedArgs))
+      Promise.resolve(this._methods[methodName](...desanitizedArgs))
         .then(resolve)
         .catch(reject);
     });
